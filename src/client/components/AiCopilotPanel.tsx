@@ -12,10 +12,9 @@ import {
 } from "lucide-react";
 import { ApiClient } from "../services/ApiClient.ts";
 import {
-  GEMINI_MODELS,
-  GEMINI_PRIMARY_MODEL,
-  resolveGeminiModel
-} from "../../modules/ai-copilot/domain/geminiModels.ts";
+  listSelectableModels,
+  resolveAiModel
+} from "../../modules/ai-copilot/domain/aiModels.ts";
 
 interface AiCopilotPanelProps {
   currentText: string;
@@ -37,8 +36,9 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [customPrompt, setCustomPrompt] = useState("");
+  const selectableModels = listSelectableModels();
   const [model, setModel] = useState(() =>
-    resolveGeminiModel(localStorage.getItem("xm_gemini_model") || GEMINI_PRIMARY_MODEL)
+    resolveAiModel(localStorage.getItem("xm_ai_model") || localStorage.getItem("xm_gemini_model")).id
   );
   const [modelOpen, setModelOpen] = useState(false);
   const modelMenuRef = useRef<HTMLDivElement>(null);
@@ -63,13 +63,13 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
   }, []);
 
   const selectModel = (id: string) => {
-    const next = resolveGeminiModel(id);
+    const next = resolveAiModel(id).id;
     setModel(next);
-    localStorage.setItem("xm_gemini_model", next);
+    localStorage.setItem("xm_ai_model", next);
     setModelOpen(false);
   };
 
-  const selectedLabel = GEMINI_MODELS.find((m) => m.id === model)?.label || model;
+  const selectedLabel = selectableModels.find((m) => m.id === model)?.label || model;
 
   const run = async (fn: () => Promise<void>) => {
     if (!currentText.trim()) return;
@@ -161,7 +161,7 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
           </div>
           {modelOpen && (
             <div className="absolute right-0 top-full mt-1 z-30 min-w-full overflow-hidden rounded-md border border-[#162032] bg-[#080c14] py-0.5 shadow-xl">
-              {GEMINI_MODELS.map((item) => (
+              {selectableModels.map((item) => (
                 <button
                   type="button"
                   key={item.id}

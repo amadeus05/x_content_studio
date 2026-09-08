@@ -6,7 +6,7 @@ import { D1PlaybookRepository } from "../modules/playbook/infrastructure/D1Playb
 import { D1MediaRepository } from "../modules/media/infrastructure/D1MediaRepository.ts";
 import { MemoryObjectStorage } from "../modules/media/infrastructure/MemoryObjectStorage.ts";
 import { KvObjectStorage } from "../modules/media/infrastructure/KvObjectStorage.ts";
-import { HybridAiService } from "../modules/ai-copilot/infrastructure/AiServiceAdapter.ts";
+import { AiOrchestrator } from "../modules/ai-copilot/infrastructure/AiOrchestrator.ts";
 import { PostController } from "./controllers/PostController.ts";
 import { PlaybookController } from "./controllers/PlaybookController.ts";
 import { AiController } from "./controllers/AiController.ts";
@@ -109,10 +109,10 @@ export function createApp(customDb?: IDatabase) {
       envAny.GEMINI_API_KEY ||
       envAny.LLM_API_KEY;
 
-    const aiService = new HybridAiService({
+    const aiService = new AiOrchestrator({
       cloudflareAi: c.env?.AI,
       geminiApiKey: geminiKey,
-      preferredModel: c.req.header("x-gemini-model")
+      preferredModel: c.req.header("x-ai-model") || c.req.header("x-gemini-model")
     });
 
     const postController = new PostController(postRepo);
