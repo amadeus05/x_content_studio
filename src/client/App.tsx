@@ -249,11 +249,22 @@ export const App: React.FC = () => {
 
   // Удаление варианта
   const handleDeleteVariant = async (variantId: string) => {
-    if (!selectedPost) return;
+    if (!selectedPost || selectedPost.variants.length <= 1) return;
+    const previous = posts;
+    const nextVariants = selectedPost.variants.filter((v) => v.id !== variantId);
+    const nextActive = nextVariants.find((v) => v.id === selectedPost.activeVariantId) || nextVariants[0];
+    setPosts(
+      posts.map((p) =>
+        p.id === selectedPost.id
+          ? { ...p, variants: nextVariants, activeVariantId: nextActive.id, activeVariant: nextActive }
+          : p
+      )
+    );
     try {
       const updated = await ApiClient.deleteVariant(selectedPost.id, variantId);
-      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+      setPosts((current) => current.map((p) => (p.id === updated.id ? updated : p)));
     } catch (err: any) {
+      setPosts(previous);
       feedback.error("Не удалось удалить вариант", err);
     }
   };

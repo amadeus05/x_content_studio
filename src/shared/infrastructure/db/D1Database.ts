@@ -267,6 +267,14 @@ export class MemoryDatabaseAdapter implements IDatabase {
       return { success: true, changes: 1 };
     }
 
+    if (lower.startsWith("delete from post_variants where post_id =")) {
+      const postId = params[0] as string;
+      for (const [vid, v] of this.variants.entries()) {
+        if (v.post_id === postId) this.variants.delete(vid);
+      }
+      return { success: true, changes: 1 };
+    }
+
     return { success: true, changes: 1 };
   }
 
