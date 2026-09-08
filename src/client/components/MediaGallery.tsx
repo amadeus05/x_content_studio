@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ImagePlus, Star, Trash2, Upload, Video } from "lucide-react";
+import { ImagePlus, Info, Plus, Star, Trash2, Video } from "lucide-react";
 import { ApiClient } from "../services/ApiClient.ts";
 import { MediaDto } from "../../modules/media/application/dtos/MediaDto.ts";
 
@@ -35,6 +35,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const blobUrlsRef = useRef<Record<string, string>>({});
   const onPreviewChangeRef = useRef(onPreviewChange);
@@ -74,9 +75,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
       setPostItems(postList);
       setVariantItems(variantList);
       setError("");
-
-      const combined = [...postList, ...variantList];
-      const next = await hydrateBlobs(combined, {});
+      const next = await hydrateBlobs([...postList, ...variantList], {});
       revokeAll(blobUrlsRef.current);
       blobUrlsRef.current = next;
       setBlobUrls(next);
@@ -122,156 +121,193 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (e.dataTransfer.files?.length) {
-      handleFiles(e.dataTransfer.files);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await ApiClient.deleteMedia(id);
-      await load();
-    } catch (err: any) {
-      setError(err.message || "Не удалось удалить");
-    }
-  };
-
-  const handlePrimary = async (id: string) => {
-    try {
-      await ApiClient.setPrimaryMedia(id);
-      await load();
-    } catch (err: any) {
-      setError(err.message || "Не удалось назначить обложку");
-    }
-  };
-
   return (
-    <div className="bg-[#0f141c] border border-[#1e2738] rounded-xl p-4 space-y-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-          <ImagePlus className="w-3.5 h-3.5 text-sky-400" />
-          Медиа (картинки и видео)
+    <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+        <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+          3. Медиафайлы (картинки и видео):
         </label>
-        <div className="flex items-center bg-[#121824] border border-[#232f44] rounded-lg p-0.5 text-[11px] font-semibold">
+        <div className="flex items-center space-x-1 bg-surface-950 p-1 rounded-lg border border-surface-800">
           <button
             type="button"
             onClick={() => setOwnerType("post")}
-            className={`px-2.5 py-1 rounded-md transition ${
-              ownerType === "post" ? "bg-sky-500/20 text-sky-300" : "text-zinc-500 hover:text-zinc-300"
+            className={`px-3 py-1 rounded-md text-xs transition-colors ${
+              ownerType === "post"
+                ? "font-semibold bg-brand-500 text-white shadow-sm"
+                : "font-medium text-slate-400 hover:text-slate-200 hover:bg-surface-850"
             }`}
           >
-            Для поста{postItems.length > 0 ? ` (${postItems.length})` : ""}
+            Пост{postItems.length > 0 ? ` · ${postItems.length}` : ""}
           </button>
           <button
             type="button"
             onClick={() => setOwnerType("post_variant")}
-            className={`px-2.5 py-1 rounded-md transition ${
-              ownerType === "post_variant" ? "bg-sky-500/20 text-sky-300" : "text-zinc-500 hover:text-zinc-300"
+            className={`px-3 py-1 rounded-md text-xs transition-colors ${
+              ownerType === "post_variant"
+                ? "font-semibold bg-brand-500 text-white shadow-sm"
+                : "font-medium text-slate-400 hover:text-slate-200 hover:bg-surface-850"
             }`}
           >
-            Для варианта{variantItems.length > 0 ? ` (${variantItems.length})` : ""}
+            Вариант{variantItems.length > 0 ? ` · ${variantItems.length}` : ""}
           </button>
         </div>
       </div>
 
-      <p className="text-[11px] text-zinc-500">
-        {ownerType === "post"
-          ? "Общие файлы поста — видны во всех вариантах, если у варианта нет своих."
-          : "Только для текущего варианта хука. Если пусто — в превью берутся медиа поста."}
-      </p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,video/mp4,video/webm,video/quicktime"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files) handleFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
 
-      <div
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        className="border border-dashed border-[#2a374d] hover:border-sky-500/50 rounded-xl px-4 py-5 text-center cursor-pointer bg-[#0b0e14] transition"
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*,video/mp4,video/webm,video/quicktime"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files) handleFiles(e.target.files);
-            e.target.value = "";
+      {items.length === 0 ? (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOver(true);
           }}
-        />
-        <Upload className="w-5 h-5 text-zinc-500 mx-auto mb-1.5" />
-        <div className="text-xs text-zinc-300 font-medium">
-          {uploading ? "Загрузка…" : "Перетащите файлы или нажмите, чтобы выбрать"}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOver(false);
+            if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+          }}
+          className={`flex flex-col items-center justify-center rounded-lg border border-dashed px-4 py-8 text-center bg-surface-950/60 transition-colors ${
+            isDragOver
+              ? "border-brand-500 bg-brand-500/5"
+              : "border-surface-750 hover:border-brand-500/50"
+          }`}
+        >
+          <svg
+            className="w-6 h-6 text-slate-400 mb-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.6"
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+          <div className="text-xs font-medium text-slate-200">
+            {uploading ? "Загрузка…" : "Перетащите картинку или видео сюда"}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            JPG, PNG, GIF, WebP · MP4, WebM · до 4 файлов
+          </div>
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            className="mt-3 flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-surface-850 hover:bg-surface-800 border border-surface-750 transition-colors disabled:opacity-50"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Загрузить с компьютера</span>
+          </button>
         </div>
-        <div className="text-[10px] text-zinc-500 mt-1">JPG, PNG, GIF, WebP · MP4, WebM · до 8 МБ / 32 МБ</div>
-      </div>
-
-      {error && <div className="text-[11px] text-rose-400">{error}</div>}
-
-      {items.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {items.map((item) => {
-            const src = blobUrls[item.id];
-            return (
-              <div
-                key={item.id}
-                className={`relative group rounded-lg overflow-hidden border bg-[#121824] aspect-square ${
-                  item.isPrimary ? "border-sky-500/70" : "border-[#243046]"
-                }`}
-              >
-                {src && item.kind === "image" ? (
-                  <img src={src} alt={item.altText || item.filename} className="w-full h-full object-cover" />
-                ) : src && item.kind === "video" ? (
-                  <video src={src} className="w-full h-full object-cover" muted />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                    {item.kind === "video" ? <Video className="w-6 h-6" /> : <ImagePlus className="w-6 h-6" />}
-                  </div>
-                )}
-
-                {item.kind === "video" && (
-                  <span className="absolute top-1.5 left-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded">
-                    VIDEO
-                  </span>
-                )}
-                {item.isPrimary && (
-                  <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-sky-500 text-white px-1.5 py-0.5 rounded">
-                    Обложка
-                  </span>
-                )}
-
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition flex items-center justify-between gap-1">
-                  <span className="text-[9px] text-zinc-300 truncate">{formatSize(item.sizeBytes)}</span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      title="Сделать обложкой"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePrimary(item.id);
-                      }}
-                      className={`p-1 rounded ${item.isPrimary ? "text-amber-300" : "text-zinc-300 hover:text-amber-300"}`}
-                    >
-                      <Star className="w-3 h-3" fill={item.isPrimary ? "currentColor" : "none"} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Удалить"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                      className="p-1 rounded text-zinc-300 hover:text-rose-400"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+      ) : (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOver(true);
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOver(false);
+            if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+          }}
+          className={`rounded-lg border border-dashed p-2 bg-surface-950/60 transition-colors ${
+            isDragOver ? "border-brand-500" : "border-surface-800"
+          }`}
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {items.map((item) => {
+              const src = blobUrls[item.id];
+              return (
+                <div
+                  key={item.id}
+                  className={`relative group rounded-lg overflow-hidden border bg-surface-950 aspect-square ${
+                    item.isPrimary ? "border-brand-500/70" : "border-surface-800"
+                  }`}
+                >
+                  {src && item.kind === "image" ? (
+                    <img src={src} alt={item.altText || item.filename} className="w-full h-full object-cover" />
+                  ) : src && item.kind === "video" ? (
+                    <video src={src} className="w-full h-full object-cover" muted />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-600">
+                      {item.kind === "video" ? <Video className="w-6 h-6" /> : <ImagePlus className="w-6 h-6" />}
+                    </div>
+                  )}
+                  {item.kind === "video" && (
+                    <span className="absolute top-1.5 left-1.5 text-[9px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded">
+                      VIDEO
+                    </span>
+                  )}
+                  {item.isPrimary && (
+                    <span className="absolute top-1.5 right-1.5 text-[9px] font-semibold bg-brand-500 text-white px-1.5 py-0.5 rounded">
+                      Обложка
+                    </span>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition flex items-center justify-between gap-1">
+                    <span className="text-[9px] text-slate-300 truncate">{formatSize(item.sizeBytes)}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        title="Сделать обложкой"
+                        onClick={() =>
+                          ApiClient.setPrimaryMedia(item.id).then(load).catch((err) => setError(err.message))
+                        }
+                        className={`p-1 rounded ${item.isPrimary ? "text-amber-300" : "text-slate-300 hover:text-amber-300"}`}
+                      >
+                        <Star className="w-3 h-3" fill={item.isPrimary ? "currentColor" : "none"} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Удалить"
+                        onClick={() =>
+                          ApiClient.deleteMedia(item.id).then(load).catch((err) => setError(err.message))
+                        }
+                        className="p-1 rounded text-slate-300 hover:text-rose-400"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+              className="aspect-square rounded-lg border border-dashed border-surface-750 hover:border-brand-500/50 bg-surface-900/40 text-slate-400 hover:text-slate-200 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="text-[10px] font-medium">{uploading ? "Загрузка…" : "Ещё файл"}</span>
+            </button>
+          </div>
         </div>
       )}
+
+      {error && <div className="text-[11px] text-rose-400 mt-2">{error}</div>}
+
+      <p className="text-[11px] text-slate-500 mt-1.5 flex items-start space-x-1">
+        <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-px" />
+        <span>
+          {ownerType === "post"
+            ? "Общие файлы поста — в превью всех вариантов, если у варианта нет своих."
+            : "Только для текущего варианта. Если пусто — в превью идут медиа поста."}
+        </span>
+      </p>
     </div>
   );
 };

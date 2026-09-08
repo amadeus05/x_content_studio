@@ -4,15 +4,9 @@ import {
   Search,
   BookOpen,
   Settings,
-  Sparkles,
-  Filter,
-  Layers,
   ChevronDown,
-  Hash,
   ExternalLink,
-  RotateCcw,
-  CheckCircle2,
-  Trash2
+  Info
 } from "lucide-react";
 import { ApiClient } from "./services/ApiClient.ts";
 import { PostDto } from "../modules/content/application/dtos/PostDto.ts";
@@ -47,6 +41,7 @@ export const App: React.FC = () => {
   const [isPlaybookOpen, setIsPlaybookOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
   const [previewMedia, setPreviewMedia] = useState<PreviewMedia[]>([]);
   const handlePreviewMedia = useCallback((items: PreviewMedia[]) => {
     setPreviewMedia(items);
@@ -276,7 +271,7 @@ export const App: React.FC = () => {
   const handleMarkPosted = async (tweetUrl?: string) => {
     if (!selectedPost) return;
     try {
-      const updated = await ApiClient.updatePost(selectedPost.id, {
+      await ApiClient.updatePost(selectedPost.id, {
         tweetUrl: tweetUrl || "",
         metrics: {}
       });
@@ -285,6 +280,31 @@ export const App: React.FC = () => {
     } catch (err: any) {
       alert(`Ошибка: ${err.message}`);
     }
+  };
+
+  const wrapBody = (before: string, after: string) => {
+    if (!selectedPost || !activeVariant) return;
+    const el = bodyRef.current;
+    const value = activeVariant.body;
+    const start = el?.selectionStart ?? value.length;
+    const end = el?.selectionEnd ?? value.length;
+    const selected = value.slice(start, end) || (after ? "текст" : "");
+    handleContentChange(activeVariant.hook, value.slice(0, start) + before + selected + after + value.slice(end));
+  };
+
+  const applyBodyList = () => {
+    if (!selectedPost || !activeVariant) return;
+    const el = bodyRef.current;
+    const value = activeVariant.body;
+    const start = el?.selectionStart ?? 0;
+    const end = el?.selectionEnd ?? value.length;
+    const block = (start === end ? value : value.slice(start, end)) || value;
+    const listed = block
+      .split("\n")
+      .map((line) => (line.startsWith("- ") || !line.trim() ? line : `- ${line}`))
+      .join("\n");
+    const next = start === end ? listed : value.slice(0, start) + listed + value.slice(end);
+    handleContentChange(activeVariant.hook, next);
   };
 
   const statusFilters = [
@@ -461,34 +481,77 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Center Column: Editor & Live X Preview */}
         {selectedPost && activeVariant ? (
-          <div className="flex-1 flex flex-col overflow-y-auto p-6 bg-[#090c12]">
-            <div className="max-w-3xl w-full mx-auto space-y-6">
-              {/* Top Meta Bar */}
-              <div className="flex items-center justify-between pb-3 border-b border-[#1c2436] flex-wrap gap-3">
-                {/* Status Switcher */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-zinc-400">Статус:</span>
+          <main className="flex-1 flex flex-col min-w-0 bg-surface-950 overflow-y-auto">
+            <div className="px-6 py-3 border-b border-surface-800 bg-surface-900/40 flex flex-wrap items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <label className="sr-only" htmlFor="post-status">
+                    Статус поста
+                  </label>
                   <select
+                    id="post-status"
                     value={selectedPost.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="bg-[#121824] border border-[#232f44] text-white text-xs font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 cursor-pointer"
+                    className={`appearance-none h-8 bg-surface-850 hover:bg-surface-800 border border-surface-750 text-xs font-semibold rounded-lg pl-2.5 pr-8 leading-none focus:outline-none focus:border-brand-500 cursor-pointer ${
+                      selectedPost.status === "POSTED"
+                        ? "text-emerald-400"
+                        : selectedPost.status === "READY"
+                          ? "text-brand-400"
+                          : selectedPost.status === "AI_REVIEW"
+                            ? "text-ai-400"
+                            : selectedPost.status === "ARCHIVED"
+                              ? "text-slate-500"
+                              : "text-amber-400"
+                    }`}
                   >
                     <option value="IDEA">💡 Идея</option>
-                    <option value="DRAFT">✍️ Черновик</option>
-                    <option value="AI_REVIEW">🤖 На доработке AI</option>
-                    <option value="READY">⏳ Готов к публикации</option>
-                    <option value="POSTED">🚀 Опубликован</option>
-                    <option value="ARCHIVED">📦 В архиве</option>
+                    <option value="DRAFT">🔥 Черновик</option>
+                    <option value="AI_REVIEW">👀 На ревью</option>
+                    <option value="READY">🚀 Готов к публикации</option>
+                    <option value="POSTED">📅 Запощен</option>
+                    <option value="ARCHIVED">📦 Архив</option>
                   </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-400">
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </div>
                 </div>
-
-                {/* Interactive Tag Editor */}
-                <div className="flex items-center gap-2">
-                  <TagEditor tags={selectedPost.tags} onChangeTags={handleTagsChange} />
+                <TagEditor tags={selectedPost.tags} onChangeTags={handleTagsChange} />
+              </div>
+              <div className="flex items-center space-x-2 bg-surface-900 px-3 py-1 rounded-lg border border-surface-800">
+                <span className="text-xs text-slate-400">Лимит символов:</span>
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-xs font-bold text-slate-200">{activeVariant.charCount}</span>
+                  <span className="text-xs text-slate-500">/ 280</span>
+                  <svg className="w-4 h-4 -rotate-90 text-brand-500" viewBox="0 0 36 36">
+                    <path
+                      className="text-surface-800"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3.5"
+                    />
+                    <path
+                      className={
+                        activeVariant.isOverLimit
+                          ? "text-rose-500"
+                          : activeVariant.remainingChars <= 20
+                            ? "text-amber-400"
+                            : "text-brand-500"
+                      }
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeDasharray={`${Math.min(100, (activeVariant.charCount / 280) * 100)}, 100`}
+                      strokeLinecap="round"
+                      strokeWidth="3.5"
+                    />
+                  </svg>
                 </div>
               </div>
+            </div>
+
+            <div className="p-6 max-w-4xl w-full mx-auto space-y-6">
 
               {/* Hook Variants Tabs */}
               <VariantTabs
@@ -503,38 +566,79 @@ export const App: React.FC = () => {
                 }}
               />
 
-              {/* Editor Inputs */}
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-sky-400 mb-1 flex items-center justify-between">
-                    <span>1. Хук (Первая строчка твита — захват внимания):</span>
-                    <span className="text-[10px] text-zinc-500 lowercase font-normal font-mono">
-                      {[...activeVariant.hook].length} знаков
-                    </span>
+              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-brand-400">
+                    1. Хук (первая строчка твита — захват внимания):
                   </label>
-                  <input
-                    type="text"
-                    value={activeVariant.hook}
-                    onChange={(e) => handleContentChange(e.target.value, activeVariant.body)}
-                    placeholder="Напишите провокационный хук, вопрос или интригующий факт..."
-                    className="w-full bg-[#101520] border border-[#212c40] rounded-xl px-4 py-3 text-sm font-semibold text-white placeholder-zinc-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 shadow-inner"
-                  />
+                  <span className="text-[11px] font-mono text-slate-400">{[...activeVariant.hook].length} знака</span>
                 </div>
+                <textarea
+                  rows={2}
+                  value={activeVariant.hook}
+                  onChange={(e) => handleContentChange(e.target.value, activeVariant.body)}
+                  placeholder="Напишите провокационный хук, вопрос или интригующий факт..."
+                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y"
+                />
+                <p className="text-[11px] text-slate-500 mt-1.5 flex items-center space-x-1">
+                  <Info className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Совет: хук должен заставить нажать «Показать ещё» или открыть тред.</span>
+                </p>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 flex items-center justify-between">
-                    <span>2. Тело поста (Раскрытие мысли или тред):</span>
-                    <span className="text-[10px] text-zinc-500 lowercase font-normal font-mono">
-                      {[...activeVariant.body].length} знаков
-                    </span>
+              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    2. Тело поста (раскрытие мысли или тред):
                   </label>
-                  <textarea
-                    value={activeVariant.body}
-                    onChange={(e) => handleContentChange(activeVariant.hook, e.target.value)}
-                    placeholder="Основная ценность, выводы, список пунктов или призыв к действию..."
-                    rows={6}
-                    className="w-full bg-[#101520] border border-[#212c40] rounded-xl p-4 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 leading-relaxed shadow-inner"
-                  />
+                  <span className="text-[11px] font-mono text-slate-400">{[...activeVariant.body].length} знака</span>
+                </div>
+                <textarea
+                  ref={bodyRef}
+                  rows={5}
+                  value={activeVariant.body}
+                  onChange={(e) => handleContentChange(activeVariant.hook, e.target.value)}
+                  placeholder="Основная ценность, выводы, список пунктов или призыв к действию..."
+                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y leading-relaxed"
+                />
+                <div className="flex items-center justify-between pt-3 mt-2 border-t border-surface-800/80 text-xs text-slate-400">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => wrapBody("**", "**")}
+                      className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded"
+                      title="Жирный"
+                    >
+                      <b>B</b>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => wrapBody("_", "_")}
+                      className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded italic"
+                      title="Курсив"
+                    >
+                      <i>I</i>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={applyBodyList}
+                      className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded"
+                      title="Список"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => wrapBody("", " 😀")}
+                      className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded"
+                      title="Смайлики"
+                    >
+                      😀
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-slate-500">Автосохранение</span>
                 </div>
               </div>
 
@@ -545,24 +649,22 @@ export const App: React.FC = () => {
                 onPreviewChange={handlePreviewMedia}
               />
 
-              {/* Live Twitter Preview Component */}
-              <div>
-                <TwitterPreview
-                  variant={activeVariant}
-                  userName={userProfile.name}
-                  userHandle={userProfile.handle}
-                  avatarUrl={userProfile.avatarUrl}
-                  status={selectedPost.status}
-                  media={previewMedia}
-                  onMarkPosted={handleMarkPosted}
-                />
-              </div>
+              <TwitterPreview
+                variant={activeVariant}
+                userName={userProfile.name}
+                userHandle={userProfile.handle}
+                avatarUrl={userProfile.avatarUrl}
+                status={selectedPost.status}
+                media={previewMedia}
+                onMarkPosted={handleMarkPosted}
+              />
 
-              {/* Internal Notes & Hypothesis */}
-              <div className="bg-[#0f141c] border border-[#1e2738] rounded-xl p-4 space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
-                  💡 Внутренние заметки и гипотеза поста:
-                </label>
+              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    4. Заметки и гипотеза:
+                  </label>
+                </div>
                 <textarea
                   value={selectedPost.notes}
                   onChange={(e) => {
@@ -572,13 +674,12 @@ export const App: React.FC = () => {
                       posts.map((p) => (p.id === selectedPost.id ? { ...p, notes: newNotes } : p))
                     );
                   }}
-                  rows={2}
+                  rows={3}
                   placeholder="Зачем пишем этот пост? Какая гипотеза? Ссылка на источник данных..."
-                  className="w-full bg-[#0b0e14] border border-[#1e2738] rounded-lg p-2.5 text-xs text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-sky-500"
+                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y leading-relaxed"
                 />
-
                 {selectedPost.tweetUrl && (
-                  <div className="flex items-center gap-2 pt-2 text-xs text-sky-400">
+                  <div className="mt-2 pt-2 border-t border-surface-800/80 flex items-center gap-2 text-xs text-brand-400">
                     <span>Ссылка на пост в X:</span>
                     <a
                       href={selectedPost.tweetUrl}
@@ -593,11 +694,11 @@ export const App: React.FC = () => {
                 )}
               </div>
             </div>
-          </div>
+          </main>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm">
+          <main className="flex-1 flex items-center justify-center bg-surface-950 text-slate-500 text-sm">
             Выберите черновик слева или создайте новый
-          </div>
+          </main>
         )}
 
         {/* Right Column: AI Copilot Assistant */}

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Hash, X } from "lucide-react";
 
 interface TagEditorProps {
   tags: string[];
@@ -12,8 +11,7 @@ export const TagEditor: React.FC<TagEditorProps> = ({ tags, onChangeTags }) => {
   const addTag = (val: string) => {
     const clean = val.trim().replace(/^#/, "");
     if (clean && !tags.includes(clean)) {
-      const newTags = [...tags, clean];
-      onChangeTags(newTags);
+      onChangeTags([...tags, clean]);
     }
     setInputValue("");
   };
@@ -34,8 +32,7 @@ export const TagEditor: React.FC<TagEditorProps> = ({ tags, onChangeTags }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     if (val.includes(",")) {
-      const parts = val.split(",");
-      parts.forEach((p) => {
+      val.split(",").forEach((p) => {
         if (p.trim()) addTag(p);
       });
       setInputValue("");
@@ -45,21 +42,26 @@ export const TagEditor: React.FC<TagEditorProps> = ({ tags, onChangeTags }) => {
   };
 
   return (
-    <div className="flex items-center flex-wrap gap-1.5 bg-[#121824] border border-[#232f44] rounded-lg px-2.5 py-1 min-h-[32px] max-w-md focus-within:border-sky-500 transition">
-      <Hash className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+    <div className="flex items-center flex-nowrap gap-1 h-8 overflow-x-auto bg-surface-850 border border-surface-750 rounded-lg px-2.5 text-xs text-slate-300 focus-within:border-brand-500">
+      <span className="text-slate-500 leading-none shrink-0">#</span>
       {tags.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full"
+          className="inline-flex items-center h-5 shrink-0 rounded-full border border-brand-500/30 bg-brand-500/15 pl-1.5 pr-0.5"
         >
-          #{tag}
+          <span className="text-[11px] font-medium leading-none text-brand-400 translate-y-px">
+            #{tag}
+          </span>
           <button
             type="button"
             onClick={() => removeTag(tag)}
-            className="hover:text-rose-400 p-0.5 transition"
+            className="flex h-5 w-3.5 items-center justify-center text-brand-400 hover:text-rose-400"
             title="Удалить тег"
           >
-            <X className="w-2.5 h-2.5" />
+            <span className="relative block size-2" aria-hidden>
+              <span className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 -translate-y-1/2 rotate-45 bg-current" />
+              <span className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-current" />
+            </span>
           </button>
         </span>
       ))}
@@ -69,8 +71,8 @@ export const TagEditor: React.FC<TagEditorProps> = ({ tags, onChangeTags }) => {
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={() => inputValue.trim() && addTag(inputValue)}
-        placeholder={tags.length === 0 ? "Теги (Enter или запятая)..." : "+ тег..."}
-        className="bg-transparent text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none min-w-[90px] flex-1 py-0.5"
+        placeholder={tags.length === 0 ? "Теги (Enter для добавления)..." : "+ тег"}
+        className="bg-transparent border-none p-0 text-xs leading-none text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-0 min-w-[72px] flex-1"
       />
     </div>
   );
