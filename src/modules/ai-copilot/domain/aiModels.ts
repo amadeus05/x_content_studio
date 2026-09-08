@@ -112,6 +112,13 @@ export function resolveAiModel(value?: string | null): AiModel {
   return getAiModel(value) || getAiModel(DEFAULT_AI_MODEL_ID) || AI_MODELS[0];
 }
 
+/** Только модели из UI-селекта (игнор скрытых CF и мусор из localStorage). */
+export function resolveSelectableAiModel(value?: string | null): AiModel {
+  const found = getAiModel(value);
+  if (found && found.selectable !== false) return found;
+  return getAiModel(DEFAULT_AI_MODEL_ID) || listSelectableModels()[0] || AI_MODELS[0];
+}
+
 export function modelsForProvider(provider: ProviderId): AiModel[] {
   return AI_MODELS.filter((m) => m.provider === provider);
 }

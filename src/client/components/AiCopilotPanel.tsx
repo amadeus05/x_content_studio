@@ -13,7 +13,7 @@ import {
 import { ApiClient } from "../services/ApiClient.ts";
 import {
   listSelectableModels,
-  resolveAiModel
+  resolveSelectableAiModel
 } from "../../modules/ai-copilot/domain/aiModels.ts";
 
 interface AiCopilotPanelProps {
@@ -37,9 +37,13 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
   const [loading, setLoading] = useState(false);
   const [customPrompt, setCustomPrompt] = useState("");
   const selectableModels = listSelectableModels();
-  const [model, setModel] = useState(() =>
-    resolveAiModel(localStorage.getItem("xm_ai_model") || localStorage.getItem("xm_gemini_model")).id
-  );
+  const [model, setModel] = useState(() => {
+    const resolved = resolveSelectableAiModel(
+      localStorage.getItem("xm_ai_model") || localStorage.getItem("xm_gemini_model")
+    );
+    localStorage.setItem("xm_ai_model", resolved.id);
+    return resolved.id;
+  });
   const [modelOpen, setModelOpen] = useState(false);
   const modelMenuRef = useRef<HTMLDivElement>(null);
   const [generatedHooks, setGeneratedHooks] = useState<string[]>([]);
@@ -63,13 +67,15 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
   }, []);
 
   const selectModel = (id: string) => {
-    const next = resolveAiModel(id).id;
+    const next = resolveSelectableAiModel(id).id;
     setModel(next);
     localStorage.setItem("xm_ai_model", next);
     setModelOpen(false);
   };
 
-  const selectedLabel = selectableModels.find((m) => m.id === model)?.label || model;
+  const selectedLabel =
+    selectableModels.find((m) => m.id === model)?.label ||
+    resolveSelectableAiModel(model).label;
 
   const run = async (fn: () => Promise<void>) => {
     if (!currentText.trim()) return;
