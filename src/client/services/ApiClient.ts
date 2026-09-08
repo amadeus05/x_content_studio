@@ -3,17 +3,23 @@ import { MethodologyDto, ToneProfileDto } from "../../modules/playbook/applicati
 import { MediaDto } from "../../modules/media/application/dtos/MediaDto.ts";
 
 export class ApiClient {
-  private static getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json"
-    };
+  private static withAuth(headers: Record<string, string>): Record<string, string> {
     const pin = localStorage.getItem("xm_auth_pin") || "1234";
     if (pin) headers["x-auth-pin"] = pin;
 
     const geminiKey = localStorage.getItem("xm_gemini_key");
     if (geminiKey) headers["x-gemini-key"] = geminiKey;
 
+    const geminiModel = localStorage.getItem("xm_gemini_model");
+    if (geminiModel) headers["x-gemini-model"] = geminiModel;
+
     return headers;
+  }
+
+  private static getHeaders(): Record<string, string> {
+    return this.withAuth({
+      "Content-Type": "application/json"
+    });
   }
 
   // --- Posts ---
@@ -199,12 +205,7 @@ export class ApiClient {
 
   // --- Media ---
   private static authOnlyHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {};
-    const pin = localStorage.getItem("xm_auth_pin") || "1234";
-    if (pin) headers["x-auth-pin"] = pin;
-    const geminiKey = localStorage.getItem("xm_gemini_key");
-    if (geminiKey) headers["x-gemini-key"] = geminiKey;
-    return headers;
+    return this.withAuth({});
   }
 
   private static async parseError(res: Response): Promise<string> {

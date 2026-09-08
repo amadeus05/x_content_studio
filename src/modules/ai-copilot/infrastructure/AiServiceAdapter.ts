@@ -1,7 +1,9 @@
 import { IAiService, CritiqueResult } from "../domain/services/IAiService.ts";
+import {
+  GEMINI_FALLBACK_MODEL,
+  resolveGeminiModel
+} from "../domain/geminiModels.ts";
 
-const GEMINI_PRIMARY_MODEL = "gemini-3.8-flash";
-const GEMINI_FALLBACK_MODEL = "gemini-2.5-flash";
 const CLOUDFLARE_AI_MODELS = [
   "@cf/meta/llama-4-scout-17b-16e-instruct",
   "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
@@ -11,6 +13,7 @@ const CLOUDFLARE_AI_MODELS = [
 export interface AiServiceConfig {
   cloudflareAi?: any; // Cloudflare env.AI binding
   geminiApiKey?: string;
+  preferredModel?: string;
 }
 
 export class HybridAiService implements IAiService {
@@ -94,17 +97,23 @@ export class HybridAiService implements IAiService {
     }
     try {
       const text = await this.callGemini("Ответь одним словом.", "ping");
-      return { success: Boolean(text), model: GEMINI_PRIMARY_MODEL };
+      return { success: Boolean(text), model: this.selectedModel() };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
   }
 
+  private selectedModel(): string {
+    return resolveGeminiModel(this.config.preferredModel);
+  }
+
   // --- Вспомогательные методы для Google Gemini API ---
   private async callGemini(systemPrompt: string, userPrompt: string): Promise<string> {
+    const preferred = this.selectedModel();
     try {
-      return await this.callGeminiModel(GEMINI_PRIMARY_MODEL, systemPrompt, userPrompt);
-    } catch {
+      return await this.callGeminiModel(preferred, systemPrompt, userPrompt);
+    } catch (err) {
+      if (preferred === GEMINI_FALLBACK_MODEL) throw err;
       return this.callGeminiModel(GEMINI_FALLBACK_MODEL, systemPrompt, userPrompt);
     }
   }

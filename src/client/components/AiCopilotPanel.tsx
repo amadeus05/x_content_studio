@@ -1,278 +1,394 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Sparkles,
   Zap,
   Scissors,
   Layers,
-  CheckCircle,
   AlertTriangle,
   Plus,
-  RotateCcw,
-  Send,
-  Loader2
+  ArrowRight,
+  Loader2,
+  ChevronDown
 } from "lucide-react";
 import { ApiClient } from "../services/ApiClient.ts";
+import {
+  GEMINI_MODELS,
+  GEMINI_PRIMARY_MODEL,
+  resolveGeminiModel
+} from "../../modules/ai-copilot/domain/geminiModels.ts";
 
 interface AiCopilotPanelProps {
   currentText: string;
   onApplyText: (newText: string) => void;
+  onApplyHook?: (hook: string) => void;
   onAddAsVariant: (hookText: string) => void;
 }
+
+const DEFAULT_ALT_HOOK =
+  "9 из 10 экспертов задают промпты неправильно. 3 формулы, меняющие результат:";
+
+type FeedKind = "idle" | "hooks" | "critique" | "thread" | "polish";
 
 export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
   currentText,
   onApplyText,
+  onApplyHook,
   onAddAsVariant
 }) => {
   const [loading, setLoading] = useState(false);
   const [customPrompt, setCustomPrompt] = useState("");
+  const [model, setModel] = useState(() =>
+    resolveGeminiModel(localStorage.getItem("xm_gemini_model") || GEMINI_PRIMARY_MODEL)
+  );
+  const [modelOpen, setModelOpen] = useState(false);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
   const [generatedHooks, setGeneratedHooks] = useState<string[]>([]);
   const [critiqueResult, setCritiqueResult] = useState<any | null>(null);
   const [threadTweets, setThreadTweets] = useState<string[]>([]);
-  const [activeTool, setActiveTool] = useState<"none" | "hooks" | "critique" | "thread">("none");
+  const [polishResult, setPolishResult] = useState("");
+  const [activeTool, setActiveTool] = useState<FeedKind>("idle");
+  const [error, setError] = useState("");
 
-  const handleGenerateHooks = async () => {
+  const applyHook = (hook: string) => {
+    if (onApplyHook) onApplyHook(hook);
+    else onApplyText(hook);
+  };
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!modelMenuRef.current?.contains(e.target as Node)) setModelOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const selectModel = (id: string) => {
+    const next = resolveGeminiModel(id);
+    setModel(next);
+    localStorage.setItem("xm_gemini_model", next);
+    setModelOpen(false);
+  };
+
+  const selectedLabel = GEMINI_MODELS.find((m) => m.id === model)?.label || model;
+
+  const run = async (fn: () => Promise<void>) => {
     if (!currentText.trim()) return;
     setLoading(true);
-    setActiveTool("hooks");
-    setCritiqueResult(null);
-    setThreadTweets([]);
+    setError("");
     try {
-      const hooks = await ApiClient.generateHooks(currentText, 3);
-      setGeneratedHooks(hooks);
+      await fn();
     } catch (err: any) {
-      alert(`Ошибка AI: ${err.message}`);
+      setError(err.message || "Ошибка AI");
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePolish = async (instruction: string) => {
-    if (!currentText.trim()) return;
-    setLoading(true);
-    try {
-      const result = await ApiClient.polish(currentText, instruction);
-      onApplyText(result);
-    } catch (err: any) {
-      alert(`Ошибка AI: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const handleGenerateHooks = () =>
+    run(async () => {
+      setActiveTool("hooks");
+      setCritiqueResult(null);
+      setThreadTweets([]);
+      setPolishResult("");
+      setGeneratedHooks(await ApiClient.generateHooks(currentText, 3));
+    });
+
+  const handlePunch = () =>
+    run(async () => {
+      setActiveTool("polish");
+      setGeneratedHooks([]);
+      setCritiqueResult(null);
+      setThreadTweets([]);
+      const result = await ApiClient.polish(
+        currentText,
+        "Сделай Punch: усили концовку и CTA, убери воду, сделай ритм жёстче"
+      );
+      setPolishResult(result);
+    });
+
+  const handleCritique = () =>
+    run(async () => {
+      setActiveTool("critique");
+      setGeneratedHooks([]);
+      setThreadTweets([]);
+      setPolishResult("");
+      setCritiqueResult(await ApiClient.critique(currentText));
+    });
+
+  const handleExpandToThread = () =>
+    run(async () => {
+      setActiveTool("thread");
+      setGeneratedHooks([]);
+      setCritiqueResult(null);
+      setPolishResult("");
+      setThreadTweets(await ApiClient.expandToThread(currentText));
+    });
+
+  const handleCustom = () => {
+    if (!customPrompt.trim()) return;
+    run(async () => {
+      setActiveTool("polish");
+      setGeneratedHooks([]);
+      setCritiqueResult(null);
+      setThreadTweets([]);
+      const result = await ApiClient.polish(currentText, customPrompt.trim());
+      setPolishResult(result);
+    });
   };
 
-  const handleCritique = async () => {
-    if (!currentText.trim()) return;
-    setLoading(true);
-    setActiveTool("critique");
-    setGeneratedHooks([]);
-    setThreadTweets([]);
-    try {
-      const critique = await ApiClient.critique(currentText);
-      setCritiqueResult(critique);
-    } catch (err: any) {
-      alert(`Ошибка AI: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleExpandToThread = async () => {
-    if (!currentText.trim()) return;
-    setLoading(true);
-    setActiveTool("thread");
-    setGeneratedHooks([]);
-    setCritiqueResult(null);
-    try {
-      const tweets = await ApiClient.expandToThread(currentText);
-      setThreadTweets(tweets);
-    } catch (err: any) {
-      alert(`Ошибка AI: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const cardClass =
+    "p-2.5 rounded-lg bg-[#111827] hover:bg-[#162032] border border-[#1e293b] text-left transition-all disabled:opacity-40 group";
 
   return (
-    <div className="bg-[#0f141c] border border-[#222b3d] rounded-2xl p-4 shadow-xl">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#1c2433] mb-3">
+    <aside className="h-full min-h-0 flex flex-col">
+      <div className="p-3.5 border-b border-[#162032] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
+          <div className="w-6 h-6 rounded-lg bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 flex items-center justify-center text-[#a78bfa]">
             <Sparkles className="w-3.5 h-3.5" />
           </div>
-          <span className="text-xs font-bold uppercase tracking-wider text-white">AI Copilot</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-100">AI Copilot</span>
         </div>
+        <div className="relative" ref={modelMenuRef}>
+          <button
+            type="button"
+            onClick={() => setModelOpen((open) => !open)}
+            className="appearance-none bg-[#080c14] border border-[#162032] text-slate-300 text-[11px] font-medium rounded-md pl-2 pr-6 py-1 focus:outline-none cursor-pointer min-w-[148px] text-left"
+          >
+            {selectedLabel}
+          </button>
+          <div className="absolute inset-y-0 right-0 flex items-center px-1.5 pointer-events-none text-slate-500">
+            <ChevronDown className="w-3 h-3" />
+          </div>
+          {modelOpen && (
+            <div className="absolute right-0 top-full mt-1 z-30 min-w-full overflow-hidden rounded-md border border-[#162032] bg-[#080c14] py-0.5 shadow-xl">
+              {GEMINI_MODELS.map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  onClick={() => selectModel(item.id)}
+                  className={`block w-full text-left px-2.5 py-1.5 text-[11px] font-medium whitespace-nowrap ${
+                    item.id === model
+                      ? "bg-[#1d9bf0] text-white"
+                      : "text-slate-200 hover:bg-[#162032]"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="p-3 border-b border-[#162032]/80 shrink-0">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+          Быстрые генераторы
+        </span>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={handleGenerateHooks} disabled={loading || !currentText.trim()} className={`${cardClass} hover:border-[#8b5cf6]/40`}>
+            <div className="flex items-center gap-1.5 text-[#a78bfa] mb-1">
+              <Zap className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold text-slate-200 group-hover:text-[#a78bfa]">3 новых хука</span>
+            </div>
+            <p className="text-[10px] text-slate-400 leading-tight">Варианты первого предложения</p>
+          </button>
+
+          <button onClick={handlePunch} disabled={loading || !currentText.trim()} className={`${cardClass} hover:border-[#1d9bf0]/40`}>
+            <div className="flex items-center gap-1.5 text-[#38bdf8] mb-1">
+              <Scissors className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold text-slate-200 group-hover:text-[#38bdf8]">Сделай Punch</span>
+            </div>
+            <p className="text-[10px] text-slate-400 leading-tight">Усилить концовку и CTA</p>
+          </button>
+
+          <button onClick={handleCritique} disabled={loading || !currentText.trim()} className={`${cardClass} hover:border-amber-500/40`}>
+            <div className="flex items-center gap-1.5 text-amber-400 mb-1">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold text-slate-200 group-hover:text-amber-400">Критика твита</span>
+            </div>
+            <p className="text-[10px] text-slate-400 leading-tight">Слабые места и клише</p>
+          </button>
+
+          <button onClick={handleExpandToThread} disabled={loading || !currentText.trim()} className={`${cardClass} hover:border-emerald-500/40`}>
+            <div className="flex items-center gap-1.5 text-emerald-400 mb-1">
+              <Layers className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold text-slate-200 group-hover:text-emerald-400">В тред (4 твита)</span>
+            </div>
+            <p className="text-[10px] text-slate-400 leading-tight">Развернуть идею подробно</p>
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {loading && (
-          <div className="flex items-center gap-1 text-[11px] text-purple-400 font-medium">
+          <div className="flex items-center gap-1.5 text-[11px] text-[#a78bfa] font-medium">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span>Генерация...</span>
+            Генерация...
+          </div>
+        )}
+        {error && <div className="text-[11px] text-rose-400">{error}</div>}
+
+        {activeTool === "idle" && !loading && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+              <span className="font-medium text-[#a78bfa]">Анализ текущего хука:</span>
+            </div>
+            <div className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed space-y-2">
+              <p>Текущий хук использует сильный триггер упущенной выгоды (FOMO 90%).</p>
+              <div className="p-2 rounded bg-[#0c111c] border border-[#162032] text-[11px] text-sky-300 font-mono">
+                💡 Альтернатива: «{DEFAULT_ALT_HOOK}»
+              </div>
+              <button
+                type="button"
+                onClick={() => applyHook(DEFAULT_ALT_HOOK)}
+                className="w-full py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
+              >
+                Заменить в редакторе
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTool === "hooks" &&
+          generatedHooks.map((hook, index) => (
+            <div key={index} className="space-y-1.5">
+              {index === 0 && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+                  <span className="font-medium text-[#a78bfa]">Сгенерированные хуки:</span>
+                </div>
+              )}
+              <div className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed space-y-2">
+                <p>{hook}</p>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => applyHook(hook)}
+                    className="flex-1 py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
+                  >
+                    Заменить в редакторе
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onAddAsVariant(hook)}
+                    className="flex items-center justify-center gap-1 px-2 py-1 text-[11px] font-semibold text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 rounded"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Вариант
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+        {activeTool === "polish" && polishResult && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+              <span className="font-medium text-[#a78bfa]">Punch / правка:</span>
+            </div>
+            <div className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed space-y-2">
+              <p className="whitespace-pre-wrap">{polishResult}</p>
+              <button
+                type="button"
+                onClick={() => onApplyText(polishResult)}
+                className="w-full py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
+              >
+                Заменить в редакторе
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTool === "critique" && critiqueResult && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+              <span className="font-medium text-[#a78bfa]">Анализ текущего хука:</span>
+            </div>
+            <div className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed space-y-2">
+              <p>
+                {critiqueResult.verdict}
+                {critiqueResult.score != null ? ` Оценка ${critiqueResult.score}/10.` : ""}
+              </p>
+              {critiqueResult.weaknesses?.length > 0 && (
+                <p className="text-slate-400">
+                  Слабые места: {critiqueResult.weaknesses.join("; ")}
+                </p>
+              )}
+              {critiqueResult.suggestedRewrite && (
+                <div className="p-2 rounded bg-[#0c111c] border border-[#162032] text-[11px] text-sky-300 font-mono whitespace-pre-wrap">
+                  💡 Альтернатива: «{critiqueResult.suggestedRewrite}»
+                </div>
+              )}
+              {critiqueResult.suggestedRewrite && (
+                <button
+                  type="button"
+                  onClick={() => onApplyText(critiqueResult.suggestedRewrite)}
+                  className="w-full py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
+                >
+                  Заменить в редакторе
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTool === "thread" && threadTweets.length > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+              <span className="font-medium text-[#a78bfa]">Тред ({threadTweets.length} твита):</span>
+            </div>
+            {threadTweets.map((tw, index) => (
+              <div key={index} className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed">
+                <p>{tw}</p>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => onApplyText(threadTweets.join("\n\n"))}
+              className="w-full py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
+            >
+              Заменить в редакторе
+            </button>
           </div>
         )}
       </div>
 
-      {/* Быстрые действия в 1 клик */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <button
-          onClick={handleGenerateHooks}
-          disabled={loading || !currentText.trim()}
-          className="flex items-center gap-1.5 px-3 py-2 bg-[#171f2e] hover:bg-[#202b40] text-sky-400 hover:text-sky-300 text-xs font-medium rounded-xl border border-sky-500/20 transition disabled:opacity-40"
+      <div className="p-3 border-t border-[#162032] bg-[#080c14]/80 shrink-0">
+        <form
+          className="relative"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleCustom();
+          }}
         >
-          <Zap className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">3 новых хука</span>
-        </button>
-
-        <button
-          onClick={() => handlePolish("Сделай punchier, сократи воду и усиль ритм")}
-          disabled={loading || !currentText.trim()}
-          className="flex items-center gap-1.5 px-3 py-2 bg-[#171f2e] hover:bg-[#202b40] text-emerald-400 hover:text-emerald-300 text-xs font-medium rounded-xl border border-emerald-500/20 transition disabled:opacity-40"
-        >
-          <Scissors className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">Сделай Punchier</span>
-        </button>
-
-        <button
-          onClick={handleCritique}
-          disabled={loading || !currentText.trim()}
-          className="flex items-center gap-1.5 px-3 py-2 bg-[#171f2e] hover:bg-[#202b40] text-purple-400 hover:text-purple-300 text-xs font-medium rounded-xl border border-purple-500/20 transition disabled:opacity-40"
-        >
-          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">Критика твита</span>
-        </button>
-
-        <button
-          onClick={handleExpandToThread}
-          disabled={loading || !currentText.trim()}
-          className="flex items-center gap-1.5 px-3 py-2 bg-[#171f2e] hover:bg-[#202b40] text-amber-400 hover:text-amber-300 text-xs font-medium rounded-xl border border-amber-500/20 transition disabled:opacity-40"
-        >
-          <Layers className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">В тред (4 твита)</span>
-        </button>
-      </div>
-
-      {/* Пользовательская инструкция */}
-      <div className="relative mb-4">
-        <input
-          type="text"
-          value={customPrompt}
-          onChange={(e) => setCustomPrompt(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && customPrompt.trim() && handlePolish(customPrompt)}
-          placeholder="Своя инструкция AI (напр. «добавь интригу»)..."
-          disabled={loading || !currentText.trim()}
-          className="w-full bg-[#0b0e14] border border-[#222c3e] rounded-xl pl-3 pr-9 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 disabled:opacity-40"
-        />
-        <button
-          onClick={() => customPrompt.trim() && handlePolish(customPrompt)}
-          disabled={loading || !customPrompt.trim() || !currentText.trim()}
-          className="absolute right-2 top-2 text-zinc-400 hover:text-purple-400 disabled:opacity-30"
-        >
-          <Send className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Результаты генерации хуков */}
-      {activeTool === "hooks" && generatedHooks.length > 0 && (
-        <div className="space-y-2 mt-3 pt-3 border-t border-[#1c2433]">
-          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-            Сгенерированные хуки:
-          </span>
-          {generatedHooks.map((hook, index) => (
-            <div
-              key={index}
-              className="bg-[#121824] border border-[#212d42] rounded-xl p-3 text-xs text-zinc-100 flex flex-col justify-between gap-2 hover:border-sky-500/50 transition"
-            >
-              <p className="leading-relaxed">{hook}</p>
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <button
-                  onClick={() => onAddAsVariant(hook)}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-sky-400 hover:text-sky-300 bg-sky-500/10 px-2 py-1 rounded-md"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Добавить как вариант</span>
-                </button>
-                <button
-                  onClick={() => onApplyText(hook)}
-                  className="text-[11px] font-semibold text-zinc-300 hover:text-white bg-[#192233] px-2 py-1 rounded-md"
-                >
-                  Заменить
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Результат Критики */}
-      {activeTool === "critique" && critiqueResult && (
-        <div className="space-y-3 mt-3 pt-3 border-t border-[#1c2433]">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-              Оценка поста:
-            </span>
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">
-              {critiqueResult.score} / 10
-            </span>
-          </div>
-
-          <p className="text-xs font-semibold text-white">{critiqueResult.verdict}</p>
-
-          {critiqueResult.strengths?.length > 0 && (
-            <div className="bg-[#0f1a18] border border-emerald-500/25 rounded-lg p-2 text-xs text-emerald-300 space-y-1">
-              <span className="font-bold flex items-center gap-1 text-[11px]">
-                <CheckCircle className="w-3 h-3 text-emerald-400" /> Сильные стороны:
-              </span>
-              {critiqueResult.strengths.map((s: string, i: number) => (
-                <div key={i} className="pl-4 text-[11px] text-zinc-300">• {s}</div>
-              ))}
-            </div>
-          )}
-
-          {critiqueResult.weaknesses?.length > 0 && (
-            <div className="bg-[#1f1317] border border-rose-500/25 rounded-lg p-2 text-xs text-rose-300 space-y-1">
-              <span className="font-bold flex items-center gap-1 text-[11px]">
-                <AlertTriangle className="w-3 h-3 text-rose-400" /> Слабые места (почему пролистнут):
-              </span>
-              {critiqueResult.weaknesses.map((w: string, i: number) => (
-                <div key={i} className="pl-4 text-[11px] text-zinc-300">• {w}</div>
-              ))}
-            </div>
-          )}
-
-          {critiqueResult.suggestedRewrite && (
-            <div className="bg-[#121824] border border-[#212c40] rounded-lg p-2.5 text-xs text-zinc-200">
-              <span className="font-bold text-sky-400 block mb-1">Предложение по улучшению:</span>
-              <p className="text-[11px] italic leading-relaxed whitespace-pre-wrap">
-                {critiqueResult.suggestedRewrite}
-              </p>
-              <button
-                onClick={() => onApplyText(critiqueResult.suggestedRewrite)}
-                className="mt-2 text-[11px] font-semibold text-sky-400 hover:text-sky-300"
-              >
-                Применить этот вариант
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Результат Треда */}
-      {activeTool === "thread" && threadTweets.length > 0 && (
-        <div className="space-y-2 mt-3 pt-3 border-t border-[#1c2433]">
-          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-            Цепочка твитов ({threadTweets.length}):
-          </span>
-          {threadTweets.map((tw, index) => (
-            <div key={index} className="bg-[#121824] border border-[#212d42] rounded-lg p-2.5 text-xs text-zinc-200">
-              <p className="leading-relaxed">{tw}</p>
-            </div>
-          ))}
+          <textarea
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleCustom();
+              }
+            }}
+            rows={2}
+            disabled={loading || !currentText.trim()}
+            placeholder="Своя инструкция AI (напр. «сделай тоньше сарказм»)..."
+            className="w-full pl-3 pr-9 py-2 text-xs bg-[#0c111c] border border-[#1e293b] rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#8b5cf6] focus:ring-1 focus:ring-[#8b5cf6] resize-none transition-colors disabled:opacity-40"
+          />
           <button
-            onClick={() => onApplyText(threadTweets.join("\n\n---\n\n"))}
-            className="w-full py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold rounded-lg border border-amber-500/40"
+            type="submit"
+            disabled={loading || !customPrompt.trim() || !currentText.trim()}
+            title="Отправить промпт"
+            className="absolute right-2 bottom-3 p-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] text-white shadow-sm transition-colors disabled:opacity-40"
           >
-            Вставить весь тред в редактор
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
-        </div>
-      )}
-    </div>
+        </form>
+      </div>
+    </aside>
   );
 };

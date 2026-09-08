@@ -573,13 +573,14 @@ export const App: React.FC = () => {
 
         {/* Right Column: AI Copilot Assistant */}
         {selectedPost && activeVariant && (
-          <div className="w-80 border-l border-[#1c2436] bg-[#0c1017] p-4 overflow-y-auto shrink-0">
+          <div className="w-80 border-l border-[#162032] bg-[#0c111c]/60 flex flex-col shrink-0 min-h-0 h-full">
             <AiCopilotPanel
               currentText={activeVariant.fullText}
               onApplyText={(text) => {
                 const parts = text.split("\n\n");
                 handleContentChange(parts[0] || "", parts.slice(1).join("\n\n"));
               }}
+              onApplyHook={(hook) => handleContentChange(hook, activeVariant.body)}
               onAddAsVariant={async (hook) => {
                 await ApiClient.addVariant(selectedPost.id, {
                   hook,

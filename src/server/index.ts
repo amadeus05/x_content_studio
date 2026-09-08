@@ -55,7 +55,8 @@ export function createApp(customDb?: IDatabase) {
 
     const aiService = new HybridAiService({
       cloudflareAi: c.env?.AI,
-      geminiApiKey: geminiKey
+      geminiApiKey: geminiKey,
+      preferredModel: c.req.header("x-gemini-model")
     });
 
     const postController = new PostController(postRepo);
