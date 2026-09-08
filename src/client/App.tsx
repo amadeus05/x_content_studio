@@ -4,7 +4,6 @@ import {
   Search,
   BookOpen,
   Settings,
-  ChevronDown,
   ExternalLink,
   Info
 } from "lucide-react";
@@ -19,6 +18,7 @@ import { PostCard } from "./components/PostCard.tsx";
 import { SettingsModal } from "./components/SettingsModal.tsx";
 import { TagEditor } from "./components/TagEditor.tsx";
 import { TagFilter } from "./components/TagFilter.tsx";
+import { StudioSelect } from "./components/StudioSelect.tsx";
 import { MediaGallery, PreviewMedia } from "./components/MediaGallery.tsx";
 import { useFeedback } from "./components/Feedback.tsx";
 
@@ -341,7 +341,15 @@ export const App: React.FC = () => {
     { id: "POSTED", label: "📅 Запощен", color: "text-emerald-400" },
     { id: "ARCHIVED", label: "📦 Архив", color: "text-slate-500" }
   ];
-  const activeStatusFilter = statusFilters.find((s) => s.id === activeFilterStatus) || statusFilters[0];
+
+  const postStatusOptions = [
+    { id: "IDEA", label: "💡 Идея", color: "text-sky-400" },
+    { id: "DRAFT", label: "🔥 Черновик", color: "text-amber-400" },
+    { id: "AI_REVIEW", label: "👀 На ревью", color: "text-ai-400" },
+    { id: "READY", label: "🚀 Готов к публикации", color: "text-brand-400" },
+    { id: "POSTED", label: "📅 Запощен", color: "text-emerald-400" },
+    { id: "ARCHIVED", label: "📦 Архив", color: "text-slate-500" }
+  ];
 
   const profileInitials = (() => {
     const parts = userProfile.name.replace(/\|/g, " ").split(/\s+/).filter(Boolean);
@@ -443,26 +451,13 @@ export const App: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-80 border-r border-surface-800 bg-surface-900/60 flex flex-col shrink-0">
           <div className="p-3 border-b border-surface-800/80 space-y-2">
-            <div className="relative">
-              <label className="sr-only" htmlFor="list-status-filter">
-                Фильтр по статусу
-              </label>
-              <select
-                id="list-status-filter"
-                value={activeFilterStatus}
-                onChange={(e) => setActiveFilterStatus(e.target.value)}
-                className={`appearance-none w-full h-8 bg-surface-850 hover:bg-surface-800 border border-surface-750 text-xs font-semibold rounded-lg pl-2.5 pr-8 leading-none focus:outline-none focus:border-brand-500 cursor-pointer ${activeStatusFilter.color}`}
-              >
-                {statusFilters.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.label}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-400">
-                <ChevronDown className="w-3.5 h-3.5" />
-              </div>
-            </div>
+            <StudioSelect
+              aria-label="Фильтр по статусу"
+              fullWidth
+              value={activeFilterStatus}
+              options={statusFilters}
+              onChange={setActiveFilterStatus}
+            />
 
             <TagFilter tags={tags} selected={selectedTags} onChange={setSelectedTags} />
           </div>
@@ -498,37 +493,12 @@ export const App: React.FC = () => {
           <main className="flex-1 flex flex-col min-w-0 bg-surface-950 overflow-y-auto">
             <div className="px-6 py-3 border-b border-surface-800 bg-surface-900/40 flex flex-wrap items-center justify-between gap-4 shrink-0">
               <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <label className="sr-only" htmlFor="post-status">
-                    Статус поста
-                  </label>
-                  <select
-                    id="post-status"
-                    value={selectedPost.status}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    className={`appearance-none h-8 bg-surface-850 hover:bg-surface-800 border border-surface-750 text-xs font-semibold rounded-lg pl-2.5 pr-8 leading-none focus:outline-none focus:border-brand-500 cursor-pointer ${
-                      selectedPost.status === "POSTED"
-                        ? "text-emerald-400"
-                        : selectedPost.status === "READY"
-                          ? "text-brand-400"
-                          : selectedPost.status === "AI_REVIEW"
-                            ? "text-ai-400"
-                            : selectedPost.status === "ARCHIVED"
-                              ? "text-slate-500"
-                              : "text-amber-400"
-                    }`}
-                  >
-                    <option value="IDEA">💡 Идея</option>
-                    <option value="DRAFT">🔥 Черновик</option>
-                    <option value="AI_REVIEW">👀 На ревью</option>
-                    <option value="READY">🚀 Готов к публикации</option>
-                    <option value="POSTED">📅 Запощен</option>
-                    <option value="ARCHIVED">📦 Архив</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-400">
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </div>
-                </div>
+                <StudioSelect
+                  aria-label="Статус поста"
+                  value={selectedPost.status}
+                  options={postStatusOptions}
+                  onChange={handleStatusChange}
+                />
                 <TagEditor tags={selectedPost.tags} onChangeTags={handleTagsChange} />
               </div>
               <div className="flex items-center space-x-2 bg-surface-900 px-3 py-1 rounded-lg border border-surface-800">
