@@ -20,8 +20,10 @@ import { SettingsModal } from "./components/SettingsModal.tsx";
 import { TagEditor } from "./components/TagEditor.tsx";
 import { TagFilter } from "./components/TagFilter.tsx";
 import { MediaGallery, PreviewMedia } from "./components/MediaGallery.tsx";
+import { useFeedback } from "./components/Feedback.tsx";
 
 export const App: React.FC = () => {
+  const feedback = useFeedback();
   const [posts, setPosts] = useState<PostDto[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [activeFilterStatus, setActiveFilterStatus] = useState<string>("ALL");
@@ -145,14 +147,19 @@ export const App: React.FC = () => {
       setPosts([newPost, ...posts.filter((p) => p.id !== newPost.id)]);
       setSelectedPostId(newPost.id);
     } catch (err: any) {
-      alert(`Ошибка создания: ${err.message}`);
+      feedback.error("Не удалось создать черновик", err);
     }
   };
 
   // Удаление поста
   const handleDeletePost = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (!confirm("Удалить этот черновик?")) return;
+    const ok = await feedback.confirm({
+      title: "Удалить черновик?",
+      message: "Пост и все его варианты будут удалены без восстановления.",
+      confirmLabel: "Удалить"
+    });
+    if (!ok) return;
     try {
       await ApiClient.deletePost(id);
       const updated = posts.filter((p) => p.id !== id);
@@ -161,7 +168,7 @@ export const App: React.FC = () => {
         setSelectedPostId(updated.length > 0 ? updated[0].id : null);
       }
     } catch (err: any) {
-      alert(`Ошибка удаления: ${err.message}`);
+      feedback.error("Не удалось удалить черновик", err);
     }
   };
 
@@ -212,7 +219,7 @@ export const App: React.FC = () => {
       const updated = await ApiClient.changeStatus(selectedPost.id, newStatus);
       setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
     } catch (err: any) {
-      alert(`Невозможно сменить статус: ${err.message}`);
+      feedback.error("Не удалось сменить статус", err);
     }
   };
 
@@ -225,7 +232,7 @@ export const App: React.FC = () => {
       });
       setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
     } catch (err: any) {
-      alert(`Ошибка добавления варианта: ${err.message}`);
+      feedback.error("Не удалось добавить вариант", err);
     }
   };
 
@@ -247,7 +254,7 @@ export const App: React.FC = () => {
       const updated = await ApiClient.deleteVariant(selectedPost.id, variantId);
       setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
     } catch (err: any) {
-      alert(`Ошибка: ${err.message}`);
+      feedback.error("Не удалось удалить вариант", err);
     }
   };
 
@@ -285,7 +292,7 @@ export const App: React.FC = () => {
       const posted = await ApiClient.changeStatus(selectedPost.id, "POSTED");
       setPosts(posts.map((p) => (p.id === posted.id ? posted : p)));
     } catch (err: any) {
-      alert(`Ошибка: ${err.message}`);
+      feedback.error("Не удалось отметить публикацию", err);
     }
   };
 
