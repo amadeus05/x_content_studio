@@ -21,9 +21,14 @@ import { TagFilter } from "./components/TagFilter.tsx";
 import { StudioSelect } from "./components/StudioSelect.tsx";
 import { MediaGallery, PreviewMedia } from "./components/MediaGallery.tsx";
 import { useFeedback } from "./components/Feedback.tsx";
+import { LoginPage } from "./components/LoginPage.tsx";
 
 export const App: React.FC = () => {
   const feedback = useFeedback();
+  const [previewLogin, setPreviewLogin] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).has("login");
+  });
   const [posts, setPosts] = useState<PostDto[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [activeFilterStatus, setActiveFilterStatus] = useState<string>("ALL");
@@ -357,6 +362,19 @@ export const App: React.FC = () => {
     if (parts[0]?.length >= 2) return parts[0].slice(0, 2).toUpperCase();
     return (userProfile.handle || "X").slice(0, 2).toUpperCase();
   })();
+
+  if (previewLogin) {
+    return (
+      <LoginPage
+        onContinue={() => {
+          setPreviewLogin(false);
+          const url = new URL(window.location.href);
+          url.searchParams.delete("login");
+          window.history.replaceState({}, "", url.pathname + url.search);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface-950">
