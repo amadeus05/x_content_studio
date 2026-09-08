@@ -18,6 +18,7 @@ import { AiCopilotPanel } from "./components/AiCopilotPanel.tsx";
 import { PostCard } from "./components/PostCard.tsx";
 import { SettingsModal } from "./components/SettingsModal.tsx";
 import { TagEditor } from "./components/TagEditor.tsx";
+import { TagFilter } from "./components/TagFilter.tsx";
 import { MediaGallery, PreviewMedia } from "./components/MediaGallery.tsx";
 
 export const App: React.FC = () => {
@@ -25,7 +26,7 @@ export const App: React.FC = () => {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [activeFilterStatus, setActiveFilterStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTag, setSelectedTag] = useState<string>("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,12 +68,15 @@ export const App: React.FC = () => {
     try {
       const data = await ApiClient.getPosts({
         status: activeFilterStatus,
-        search: searchQuery,
-        tag: selectedTag
+        search: searchQuery
       });
-      setPosts(data);
-      if (data.length > 0 && !selectedPostId) {
-        setSelectedPostId(data[0].id);
+      const visible =
+        selectedTags.length > 0
+          ? data.filter((p) => selectedTags.every((tag) => p.tags.includes(tag)))
+          : data;
+      setPosts(visible);
+      if (visible.length > 0 && !selectedPostId) {
+        setSelectedPostId(visible[0].id);
       }
     } catch (err: any) {
       console.error("Error loading posts:", err);
@@ -104,7 +108,7 @@ export const App: React.FC = () => {
     loadPosts();
     loadPlaybook();
     loadTags();
-  }, [activeFilterStatus, selectedTag]);
+  }, [activeFilterStatus, selectedTags]);
 
   // Хоткей для создания поста (N) и поиска (Cmd+K)
   useEffect(() => {
@@ -135,7 +139,10 @@ export const App: React.FC = () => {
         initialBody: "",
         status: "DRAFT"
       });
-      setPosts([newPost, ...posts]);
+      if (activeFilterStatus !== "ALL" && activeFilterStatus !== "DRAFT") {
+        setActiveFilterStatus("ALL");
+      }
+      setPosts([newPost, ...posts.filter((p) => p.id !== newPost.id)]);
       setSelectedPostId(newPost.id);
     } catch (err: any) {
       alert(`Ошибка создания: ${err.message}`);
@@ -308,14 +315,15 @@ export const App: React.FC = () => {
   };
 
   const statusFilters = [
-    { id: "ALL", label: "Все посты" },
-    { id: "IDEA", label: "💡 Идеи" },
-    { id: "DRAFT", label: "✍️ Черновики" },
-    { id: "AI_REVIEW", label: "🤖 AI доработка" },
-    { id: "READY", label: "⏳ Готовы" },
-    { id: "POSTED", label: "🚀 Опубликовано" },
-    { id: "ARCHIVED", label: "📦 Архив" }
+    { id: "ALL", label: "Все статусы", color: "text-slate-200" },
+    { id: "IDEA", label: "💡 Идея", color: "text-sky-400" },
+    { id: "DRAFT", label: "🔥 Черновик", color: "text-amber-400" },
+    { id: "AI_REVIEW", label: "👀 На ревью", color: "text-ai-400" },
+    { id: "READY", label: "🚀 Готов", color: "text-brand-400" },
+    { id: "POSTED", label: "📅 Запощен", color: "text-emerald-400" },
+    { id: "ARCHIVED", label: "📦 Архив", color: "text-slate-500" }
   ];
+  const activeStatusFilter = statusFilters.find((s) => s.id === activeFilterStatus) || statusFilters[0];
 
   const profileInitials = (() => {
     const parts = userProfile.name.replace(/\|/g, " ").split(/\s+/).filter(Boolean);
@@ -325,7 +333,7 @@ export const App: React.FC = () => {
   })();
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#090c12]">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface-950">
       {/* Top Navbar */}
       <header className="h-14 border-b border-surface-800 bg-surface-900/90 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0 select-none">
         <div className="flex items-center space-x-6">
@@ -415,57 +423,36 @@ export const App: React.FC = () => {
 
       {/* Main Workspace (3 columns) */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Column: Post List & Filters */}
-        <div className="w-80 border-r border-[#1c2436] bg-[#0c1017] flex flex-col shrink-0">
-          {/* Status filter bar */}
-          <div className="p-3 border-b border-[#1c2436] overflow-x-auto flex items-center gap-1.5">
-            {statusFilters.map((st) => (
-              <button
-                key={st.id}
-                onClick={() => setActiveFilterStatus(st.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-                  activeFilterStatus === st.id
-                    ? "bg-sky-500/20 text-sky-300 border border-sky-500/40"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-[#151b26]"
-                }`}
+        <aside className="w-80 border-r border-surface-800 bg-surface-900/60 flex flex-col shrink-0">
+          <div className="p-3 border-b border-surface-800/80 space-y-2">
+            <div className="relative">
+              <label className="sr-only" htmlFor="list-status-filter">
+                Фильтр по статусу
+              </label>
+              <select
+                id="list-status-filter"
+                value={activeFilterStatus}
+                onChange={(e) => setActiveFilterStatus(e.target.value)}
+                className={`appearance-none w-full h-8 bg-surface-850 hover:bg-surface-800 border border-surface-750 text-xs font-semibold rounded-lg pl-2.5 pr-8 leading-none focus:outline-none focus:border-brand-500 cursor-pointer ${activeStatusFilter.color}`}
               >
-                {st.label}
-              </button>
-            ))}
+                {statusFilters.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.label}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-400">
+                <ChevronDown className="w-3.5 h-3.5" />
+              </div>
+            </div>
+
+            <TagFilter tags={tags} selected={selectedTags} onChange={setSelectedTags} />
           </div>
 
-          {/* Tags list */}
-          {tags.length > 0 && (
-            <div className="px-3 py-2 border-b border-[#1c2436] flex items-center gap-1 overflow-x-auto text-[11px]">
-              <button
-                onClick={() => setSelectedTag("")}
-                className={`px-2 py-0.5 rounded ${
-                  selectedTag === "" ? "bg-zinc-700 text-white" : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                Все теги
-              </button>
-              {tags.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setSelectedTag(t === selectedTag ? "" : t)}
-                  className={`px-2 py-0.5 rounded font-medium ${
-                    selectedTag === t
-                      ? "bg-sky-500/25 text-sky-300 border border-sky-500/40"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                >
-                  #{t}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* List of cards */}
-          <div className="p-3 overflow-y-auto flex-1 space-y-2.5">
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
             {posts.length === 0 ? (
-              <div className="text-center py-12 text-zinc-500 text-xs">
-                {loading ? "Загрузка черновиков..." : "Нет постов в этом статусе. Нажмите «Новый черновик»!"}
+              <div className="text-center py-12 text-slate-500 text-xs">
+                {loading ? "Загрузка черновиков..." : "Нет постов в этом разделе. Нажмите «Новый черновик»."}
               </div>
             ) : (
               posts.map((post) => (
@@ -479,7 +466,15 @@ export const App: React.FC = () => {
               ))
             )}
           </div>
-        </div>
+
+          <div className="p-2.5 border-t border-surface-800 bg-surface-950/60 flex items-center justify-between text-[11px] text-slate-500">
+            <span className="flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Синхронизировано с X</span>
+            </span>
+            <span className="font-mono text-[10px]">v1.0</span>
+          </div>
+        </aside>
 
         {selectedPost && activeVariant ? (
           <main className="flex-1 flex flex-col min-w-0 bg-surface-950 overflow-y-auto">
