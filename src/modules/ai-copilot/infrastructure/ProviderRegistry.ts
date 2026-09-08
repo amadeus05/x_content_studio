@@ -1,11 +1,13 @@
 import type { ILlmProvider } from "../domain/ILlmProvider.ts";
 import type { AiModel, ProviderId } from "../domain/aiModels.ts";
 import { GeminiProvider } from "./providers/GeminiProvider.ts";
+import { GroqProvider } from "./providers/GroqProvider.ts";
 import { CloudflareProvider } from "./providers/CloudflareProvider.ts";
 import { LocalFallback } from "./providers/LocalFallback.ts";
 
 export type ProviderRegistryConfig = {
   geminiApiKey?: string;
+  groqApiKey?: string;
   cloudflareAi?: any;
 };
 
@@ -23,15 +25,17 @@ export type ProviderRegistry = {
  */
 export function createProviderRegistry(config: ProviderRegistryConfig = {}): ProviderRegistry {
   const gemini = new GeminiProvider(config.geminiApiKey);
+  const groq = new GroqProvider(config.groqApiKey);
   const cloudflare = new CloudflareProvider(config.cloudflareAi);
   const local = new LocalFallback();
 
   const byId = new Map<string, ILlmProvider>([
     [gemini.id, gemini],
+    [groq.id, groq],
     [cloudflare.id, cloudflare]
   ]);
 
-  const chatOrder: ILlmProvider[] = [gemini, cloudflare];
+  const chatOrder: ILlmProvider[] = [gemini, groq, cloudflare];
 
   return {
     get(id) {

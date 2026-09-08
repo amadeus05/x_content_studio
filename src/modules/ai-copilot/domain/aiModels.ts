@@ -1,4 +1,4 @@
-export type ProviderId = "gemini" | "cloudflare";
+export type ProviderId = "gemini" | "groq" | "cloudflare";
 
 export type AiModel = {
   id: string;
@@ -12,6 +12,7 @@ export type AiModel = {
 
 /**
  * Каталог моделей. Новый провайдер: ProviderId + записи сюда + класс в providers/.
+ * Groq free/dev (проверено по API ключу): https://console.groq.com/docs/models
  */
 export const AI_MODELS: AiModel[] = [
   {
@@ -39,6 +40,41 @@ export const AI_MODELS: AiModel[] = [
     label: "Gemini 3.5 Flash Lite",
     provider: "gemini",
     fallbackId: "gemini-3.5-flash",
+    selectable: true
+  },
+  // --- Groq (бесплатный developer tier, проверено chat/completions) ---
+  {
+    id: "qwen/qwen3.8-27b",
+    label: "Qwen 3.8 27B · Groq",
+    provider: "groq",
+    fallbackId: "qwen/qwen3.6-27b",
+    selectable: true
+  },
+  {
+    id: "qwen/qwen3.6-27b",
+    label: "Qwen 3.6 27B · Groq",
+    provider: "groq",
+    fallbackId: "openai/gpt-oss-20b",
+    selectable: true
+  },
+  {
+    id: "openai/gpt-oss-20b",
+    label: "GPT-OSS 20B · Groq",
+    provider: "groq",
+    fallbackId: "openai/gpt-oss-120b",
+    selectable: true
+  },
+  {
+    id: "openai/gpt-oss-120b",
+    label: "GPT-OSS 120B · Groq",
+    provider: "groq",
+    fallbackId: "allam-2-7b",
+    selectable: true
+  },
+  {
+    id: "allam-2-7b",
+    label: "ALLaM 2 7B · Groq",
+    provider: "groq",
     selectable: true
   },
   {

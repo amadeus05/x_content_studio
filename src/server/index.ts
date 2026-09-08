@@ -30,6 +30,7 @@ export type Bindings = {
   AUTH_PIN?: string;
   GEMINI_API_KEY?: string;
   LLM_API_KEY?: string;
+  GROQ_API_KEY?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_BOT_USERNAME?: string;
   TELEGRAM_ALLOWED_IDS?: string;
@@ -109,9 +110,13 @@ export function createApp(customDb?: IDatabase) {
       envAny.GEMINI_API_KEY ||
       envAny.LLM_API_KEY;
 
+    const groqKey =
+      c.req.header("x-groq-key") || c.env?.GROQ_API_KEY || envAny.GROQ_API_KEY;
+
     const aiService = new AiOrchestrator({
       cloudflareAi: c.env?.AI,
       geminiApiKey: geminiKey,
+      groqApiKey: groqKey,
       preferredModel: c.req.header("x-ai-model") || c.req.header("x-gemini-model")
     });
 

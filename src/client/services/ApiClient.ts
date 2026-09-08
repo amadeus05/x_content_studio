@@ -24,6 +24,9 @@ export class ApiClient {
     const geminiKey = localStorage.getItem("xm_gemini_key");
     if (geminiKey) headers["x-gemini-key"] = geminiKey;
 
+    const groqKey = localStorage.getItem("xm_groq_key");
+    if (groqKey) headers["x-groq-key"] = groqKey;
+
     const aiModel =
       localStorage.getItem("xm_ai_model") || localStorage.getItem("xm_gemini_model");
     if (aiModel) headers["x-ai-model"] = aiModel;

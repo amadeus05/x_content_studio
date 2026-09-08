@@ -21,6 +21,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [handle, setHandle] = useState(userProfile.handle);
   const [avatarUrl, setAvatarUrl] = useState(userProfile.avatarUrl);
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem("xm_gemini_key") || "");
+  const [groqKey, setGroqKey] = useState(localStorage.getItem("xm_groq_key") || "");
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   if (!isOpen) return null;
@@ -31,6 +32,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     if (geminiKey) localStorage.setItem("xm_gemini_key", geminiKey);
     else localStorage.removeItem("xm_gemini_key");
+
+    if (groqKey) localStorage.setItem("xm_groq_key", groqKey);
+    else localStorage.removeItem("xm_groq_key");
 
     setSavedSuccess(true);
     setTimeout(() => {
@@ -93,10 +97,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="pt-3 border-t border-[#1c2433]">
             <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-              Google Gemini API Key (Опционально)
+              Google Gemini API Key
             </span>
             <p className="text-[11px] text-zinc-500 mb-2">
-              Если ключ не указан, работает встроенный локальный генератор формул X или Cloudflare Workers AI.
+              Опционально. Без ключей — Cloudflare AI или локальный фолбэк.
             </p>
             <input
               type="password"
@@ -104,6 +108,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={(e) => setGeminiKey(e.target.value)}
               placeholder="AIzaSy..."
               className="w-full bg-[#121824] border border-[#222c3e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-[#1c2433]">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-2 flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-orange-400" />
+              Groq API Key
+            </span>
+            <p className="text-[11px] text-zinc-500 mb-2">
+              Для Qwen / GPT-OSS на Groq. Ключ:{" "}
+              <a
+                href="https://console.groq.com/keys"
+                target="_blank"
+                rel="noreferrer"
+                className="text-sky-400 hover:underline"
+              >
+                console.groq.com/keys
+              </a>
+            </p>
+            <input
+              type="password"
+              value={groqKey}
+              onChange={(e) => setGroqKey(e.target.value)}
+              placeholder="gsk_..."
+              className="w-full bg-[#121824] border border-[#222c3e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 font-mono"
             />
           </div>
 

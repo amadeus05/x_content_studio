@@ -43,7 +43,8 @@ export default defineConfig(({ mode }) => {
                 TELEGRAM_ALLOWED_IDS: process.env.TELEGRAM_ALLOWED_IDS,
                 SESSION_SECRET: process.env.SESSION_SECRET,
                 LLM_API_KEY: process.env.LLM_API_KEY,
-                GEMINI_API_KEY: process.env.GEMINI_API_KEY
+                GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+                GROQ_API_KEY: process.env.GROQ_API_KEY
               });
 
               res.statusCode = webResponse.status;

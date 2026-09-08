@@ -21,6 +21,7 @@ import { parseCritiqueJson, parseHookList, parseThread } from "./responseParsers
 export interface AiOrchestratorConfig {
   cloudflareAi?: any;
   geminiApiKey?: string;
+  groqApiKey?: string;
   preferredModel?: string;
 }
 
@@ -34,6 +35,7 @@ export class AiOrchestrator implements IAiService {
   constructor(private readonly config: AiOrchestratorConfig = {}) {
     this.registry = createProviderRegistry({
       geminiApiKey: config.geminiApiKey,
+      groqApiKey: config.groqApiKey,
       cloudflareAi: config.cloudflareAi
     });
   }
