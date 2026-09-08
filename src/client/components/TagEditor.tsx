@@ -70,7 +70,7 @@ export const TagEditor: React.FC<TagEditorProps> = ({ tags, onChangeTags }) => {
         onKeyDown={handleKeyDown}
         onBlur={() => inputValue.trim() && addTag(inputValue)}
         placeholder={tags.length === 0 ? "Теги (Enter для добавления)..." : "+ тег"}
-        className="bg-transparent border-none p-0 text-xs leading-none text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-0 min-w-[72px] flex-1"
+        className="bg-transparent border-0 shadow-none outline-none ring-0 appearance-none p-0 text-xs leading-none text-slate-200 placeholder-slate-500 focus:border-0 focus:shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 transition-none min-w-[72px] flex-1"
       />
     </div>
   );
