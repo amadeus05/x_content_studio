@@ -8,6 +8,7 @@ import {
   Info
 } from "lucide-react";
 import { ApiClient } from "./services/ApiClient.ts";
+import type { AuthConfig } from "./services/ApiClient.ts";
 import { PostDto } from "../modules/content/application/dtos/PostDto.ts";
 import { MethodologyDto, ToneProfileDto } from "../modules/playbook/application/use-cases/GetPlaybookUseCase.ts";
 import { TwitterPreview } from "./components/TwitterPreview.tsx";
@@ -25,10 +26,10 @@ import { LoginPage } from "./components/LoginPage.tsx";
 
 export const App: React.FC = () => {
   const feedback = useFeedback();
-  const [previewLogin, setPreviewLogin] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return new URLSearchParams(window.location.search).has("login");
-  });
+  const [authReady, setAuthReady] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
+  const [authBootError, setAuthBootError] = useState("");
   const [posts, setPosts] = useState<PostDto[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [activeFilterStatus, setActiveFilterStatus] = useState<string>("ALL");
@@ -112,10 +113,36 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [cfg, me] = await Promise.all([ApiClient.getAuthConfig(), ApiClient.getMe()]);
+        if (cancelled) return;
+        setAuthConfig(cfg);
+        setAuthBootError("");
+        const needsGate = cfg.telegramEnabled || cfg.pinEnabled;
+        setAuthenticated(!needsGate || me.authenticated);
+      } catch (err: any) {
+        if (!cancelled) {
+          setAuthConfig(null);
+          setAuthenticated(false);
+          setAuthBootError(err?.message || "Не удалось проверить сессию");
+        }
+      } finally {
+        if (!cancelled) setAuthReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authenticated) return;
     loadPosts();
     loadPlaybook();
     loadTags();
-  }, [activeFilterStatus, selectedTags]);
+  }, [activeFilterStatus, selectedTags, authenticated]);
 
   // Хоткей для создания поста (N) и поиска (Cmd+K)
   useEffect(() => {
@@ -363,14 +390,23 @@ export const App: React.FC = () => {
     return (userProfile.handle || "X").slice(0, 2).toUpperCase();
   })();
 
-  if (previewLogin) {
+  if (!authReady) {
+    return (
+      <div className="min-h-screen w-screen bg-surface-950 flex items-center justify-center text-slate-500 text-sm">
+        Загрузка…
+      </div>
+    );
+  }
+
+  if (!authenticated) {
     return (
       <LoginPage
-        onContinue={() => {
-          setPreviewLogin(false);
-          const url = new URL(window.location.href);
-          url.searchParams.delete("login");
-          window.history.replaceState({}, "", url.pathname + url.search);
+        botUsername={authConfig?.botUsername || ""}
+        pinEnabled={authConfig ? authConfig.pinEnabled : true}
+        bootError={authBootError}
+        onSuccess={() => {
+          setAuthBootError("");
+          setAuthenticated(true);
         }}
       />
     );
@@ -754,6 +790,7 @@ export const App: React.FC = () => {
           setUserProfile(p);
           localStorage.setItem("xm_user_profile", JSON.stringify(p));
         }}
+        onLogout={() => setAuthenticated(false)}
       />
     </div>
   );

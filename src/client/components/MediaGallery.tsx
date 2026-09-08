@@ -57,8 +57,8 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
         try {
           next[item.id] = await ApiClient.getMediaBlobUrl(item.id);
         } catch {
-          const pin = localStorage.getItem("xm_auth_pin") || "1234";
-          next[item.id] = `${item.url}?pin=${encodeURIComponent(pin)}`;
+          // Same-origin URL: браузер сам приложит session cookie
+          next[item.id] = item.url;
         }
       })
     );

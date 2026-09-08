@@ -2,11 +2,25 @@ import { PostDto } from "../../modules/content/application/dtos/PostDto.ts";
 import { MethodologyDto, ToneProfileDto } from "../../modules/playbook/application/use-cases/GetPlaybookUseCase.ts";
 import { MediaDto } from "../../modules/media/application/dtos/MediaDto.ts";
 
+export type AuthConfig = {
+  telegramEnabled: boolean;
+  botUsername: string | null;
+  pinEnabled: boolean;
+};
+
+export type AuthMe = {
+  authenticated: boolean;
+  user: {
+    id: number;
+    username?: string;
+    firstName?: string;
+    photoUrl?: string;
+    via?: string;
+  } | null;
+};
+
 export class ApiClient {
   private static withAuth(headers: Record<string, string>): Record<string, string> {
-    const pin = localStorage.getItem("xm_auth_pin") || "1234";
-    if (pin) headers["x-auth-pin"] = pin;
-
     const geminiKey = localStorage.getItem("xm_gemini_key");
     if (geminiKey) headers["x-gemini-key"] = geminiKey;
 
@@ -22,6 +36,60 @@ export class ApiClient {
     });
   }
 
+  private static async request(input: string, init: RequestInit = {}): Promise<Response> {
+    return fetch(input, {
+      ...init,
+      credentials: "include",
+      headers: init.headers
+    });
+  }
+
+  private static async parseError(res: Response): Promise<string> {
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      return data.error || text || "Ошибка запроса";
+    } catch {
+      return text || res.statusText || "Ошибка запроса";
+    }
+  }
+
+  public static async getAuthConfig(): Promise<AuthConfig> {
+    const res = await this.request("/api/auth/config");
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  public static async getMe(): Promise<AuthMe> {
+    const res = await this.request("/api/auth/me");
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  public static async loginTelegram(payload: Record<string, unknown>): Promise<void> {
+    const res = await this.request("/api/auth/telegram", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+  }
+
+  public static async loginPin(pin: string): Promise<void> {
+    const res = await this.request("/api/auth/pin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin })
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    localStorage.removeItem("xm_auth_pin");
+  }
+
+  public static async logout(): Promise<void> {
+    await this.request("/api/auth/logout", { method: "POST" });
+    localStorage.removeItem("xm_auth_pin");
+  }
+
   // --- Posts ---
   public static async getPosts(filters: { status?: string; search?: string; tag?: string } = {}): Promise<PostDto[]> {
     const params = new URLSearchParams();
@@ -29,24 +97,24 @@ export class ApiClient {
     if (filters.search) params.append("search", filters.search);
     if (filters.tag) params.append("tag", filters.tag);
 
-    const res = await fetch(`/api/posts?${params.toString()}`, { headers: this.getHeaders() });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await this.request(`/api/posts?${params.toString()}`, { headers: this.getHeaders() });
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async getPost(id: string): Promise<PostDto> {
-    const res = await fetch(`/api/posts/${id}`, { headers: this.getHeaders() });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await this.request(`/api/posts/${id}`, { headers: this.getHeaders() });
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async createPost(data: { initialHook?: string; initialBody?: string; status?: string; tags?: string[]; notes?: string }): Promise<PostDto> {
-    const res = await fetch("/api/posts", {
+    const res = await this.request("/api/posts", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
@@ -63,142 +131,142 @@ export class ApiClient {
       metrics?: any;
     }
   ): Promise<PostDto> {
-    const res = await fetch(`/api/posts/${id}`, {
+    const res = await this.request(`/api/posts/${id}`, {
       method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async changeStatus(id: string, status: string): Promise<PostDto> {
-    const res = await fetch(`/api/posts/${id}/status`, {
+    const res = await this.request(`/api/posts/${id}/status`, {
       method: "PATCH",
       headers: this.getHeaders(),
       body: JSON.stringify({ status })
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async addVariant(id: string, data: { hook?: string; body?: string; label?: string }): Promise<PostDto> {
-    const res = await fetch(`/api/posts/${id}/variants`, {
+    const res = await this.request(`/api/posts/${id}/variants`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async selectVariant(id: string, variantId: string): Promise<PostDto> {
-    const res = await fetch(`/api/posts/${id}/variants/${variantId}/select`, {
+    const res = await this.request(`/api/posts/${id}/variants/${variantId}/select`, {
       method: "PUT",
       headers: this.getHeaders()
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async deleteVariant(id: string, variantId: string): Promise<PostDto> {
-    const res = await fetch(`/api/posts/${id}/variants/${variantId}`, {
+    const res = await this.request(`/api/posts/${id}/variants/${variantId}`, {
       method: "DELETE",
       headers: this.getHeaders()
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async deletePost(id: string): Promise<void> {
-    const res = await fetch(`/api/posts/${id}`, {
+    const res = await this.request(`/api/posts/${id}`, {
       method: "DELETE",
       headers: this.getHeaders()
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
   }
 
   public static async getTags(): Promise<string[]> {
-    const res = await fetch("/api/tags", { headers: this.getHeaders() });
+    const res = await this.request("/api/tags", { headers: this.getHeaders() });
     if (!res.ok) return [];
     return res.json();
   }
 
   // --- Playbook ---
   public static async getPlaybook(): Promise<{ methodologies: MethodologyDto[]; toneProfile: ToneProfileDto }> {
-    const res = await fetch("/api/playbook", { headers: this.getHeaders() });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await this.request("/api/playbook", { headers: this.getHeaders() });
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async saveMethodology(data: any): Promise<MethodologyDto> {
-    const res = await fetch("/api/playbook/methodologies", {
+    const res = await this.request("/api/playbook/methodologies", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async deleteMethodology(id: string): Promise<void> {
-    const res = await fetch(`/api/playbook/methodologies/${id}`, {
+    const res = await this.request(`/api/playbook/methodologies/${id}`, {
       method: "DELETE",
       headers: this.getHeaders()
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
   }
 
   public static async saveToneProfile(data: any): Promise<ToneProfileDto> {
-    const res = await fetch("/api/playbook/tone", {
+    const res = await this.request("/api/playbook/tone", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   // --- AI ---
   public static async generateHooks(text: string, count: number = 3): Promise<string[]> {
-    const res = await fetch("/api/ai/hooks", {
+    const res = await this.request("/api/ai/hooks", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ text, count })
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     const data = await res.json();
     return data.hooks;
   }
 
   public static async polish(text: string, instructions: string): Promise<string> {
-    const res = await fetch("/api/ai/polish", {
+    const res = await this.request("/api/ai/polish", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ text, instructions })
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     const data = await res.json();
     return data.result;
   }
 
   public static async critique(text: string): Promise<any> {
-    const res = await fetch("/api/ai/critique", {
+    const res = await this.request("/api/ai/critique", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ text })
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
 
   public static async expandToThread(text: string): Promise<string[]> {
-    const res = await fetch("/api/ai/thread", {
+    const res = await this.request("/api/ai/thread", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ text })
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await this.parseError(res));
     const data = await res.json();
     return data.tweets;
   }
@@ -208,18 +276,9 @@ export class ApiClient {
     return this.withAuth({});
   }
 
-  private static async parseError(res: Response): Promise<string> {
-    try {
-      const data = await res.json();
-      return data.error || JSON.stringify(data);
-    } catch {
-      return res.statusText || "Ошибка запроса";
-    }
-  }
-
   public static async listMedia(modelType: string, modelId: string): Promise<MediaDto[]> {
     const params = new URLSearchParams({ modelType, modelId });
-    const res = await fetch(`/api/media?${params.toString()}`, { headers: this.getHeaders() });
+    const res = await this.request(`/api/media?${params.toString()}`, { headers: this.getHeaders() });
     if (!res.ok) throw new Error(await this.parseError(res));
     return res.json();
   }
@@ -236,7 +295,7 @@ export class ApiClient {
     form.append("file", file);
     if (altText) form.append("altText", altText);
 
-    const res = await fetch("/api/media", {
+    const res = await this.request("/api/media", {
       method: "POST",
       headers: this.authOnlyHeaders(),
       body: form
@@ -246,7 +305,7 @@ export class ApiClient {
   }
 
   public static async deleteMedia(id: string): Promise<void> {
-    const res = await fetch(`/api/media/${id}`, {
+    const res = await this.request(`/api/media/${id}`, {
       method: "DELETE",
       headers: this.getHeaders()
     });
@@ -254,7 +313,7 @@ export class ApiClient {
   }
 
   public static async setPrimaryMedia(id: string): Promise<MediaDto> {
-    const res = await fetch(`/api/media/${id}/primary`, {
+    const res = await this.request(`/api/media/${id}/primary`, {
       method: "PATCH",
       headers: this.getHeaders()
     });
@@ -263,7 +322,7 @@ export class ApiClient {
   }
 
   public static async getMediaBlobUrl(id: string): Promise<string> {
-    const res = await fetch(`/api/media/${id}/file`, { headers: this.authOnlyHeaders() });
+    const res = await this.request(`/api/media/${id}/file`, { headers: this.authOnlyHeaders() });
     if (!res.ok) throw new Error(await this.parseError(res));
     const blob = await res.blob();
     return URL.createObjectURL(blob);

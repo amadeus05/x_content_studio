@@ -1,10 +1,83 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { ApiClient } from "../services/ApiClient.ts";
 
 interface LoginPageProps {
-  onContinue?: () => void;
+  botUsername: string;
+  pinEnabled: boolean;
+  onSuccess: () => void;
+  bootError?: string;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onContinue }) => {
+declare global {
+  interface Window {
+    onTelegramAuth?: (user: Record<string, unknown>) => void;
+  }
+}
+
+export const LoginPage: React.FC<LoginPageProps> = ({ botUsername, pinEnabled, onSuccess, bootError }) => {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const widgetRef = useRef<HTMLDivElement>(null);
+  const onSuccessRef = useRef(onSuccess);
+  onSuccessRef.current = onSuccess;
+
+  useEffect(() => {
+    window.onTelegramAuth = async (user) => {
+      setError("");
+      setLoading(true);
+      try {
+        await ApiClient.loginTelegram(user);
+        onSuccessRef.current();
+      } catch (err: any) {
+        setError(err.message || "Не удалось войти через Telegram");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const host = widgetRef.current;
+    if (!host || !botUsername) {
+      return () => {
+        delete window.onTelegramAuth;
+      };
+    }
+
+    host.innerHTML = "";
+    const script = document.createElement("script");
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    script.async = true;
+    script.setAttribute("data-telegram-login", botUsername);
+    script.setAttribute("data-size", "large");
+    script.setAttribute("data-radius", "12");
+    script.setAttribute("data-userpic", "false");
+    script.setAttribute("data-onauth", "onTelegramAuth(user)");
+    script.setAttribute("data-request-access", "write");
+    host.appendChild(script);
+
+    return () => {
+      delete window.onTelegramAuth;
+      host.innerHTML = "";
+    };
+  }, [botUsername]);
+
+  const handlePinLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pin.trim()) return;
+    setError("");
+    setLoading(true);
+    try {
+      await ApiClient.loginPin(pin.trim());
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || "Неверный PIN");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isLocalhost = /localhost|127\.0\.0\.1/.test(window.location.hostname);
+
   return (
     <div className="relative min-h-screen w-screen overflow-hidden bg-surface-950 text-slate-200 flex flex-col">
       <div
@@ -50,45 +123,72 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onContinue }) => {
           </div>
 
           <div className="bg-surface-900/90 border border-surface-800 rounded-2xl p-6 sm:p-7 shadow-2xl shadow-black/40 backdrop-blur-sm">
-            <button
-              type="button"
-              onClick={onContinue}
-              className="w-full flex items-center justify-center gap-2.5 h-11 rounded-xl text-sm font-semibold text-white bg-[#229ED9] hover:bg-[#1b8bc0] shadow-md shadow-[#229ED9]/20 transition-colors"
-            >
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24" aria-hidden>
-                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-              </svg>
-              Войти через Telegram
-            </button>
+            {botUsername ? (
+              <div className="relative h-11 w-full rounded-xl overflow-hidden shadow-md shadow-[#229ED9]/20">
+                <div
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2.5 bg-[#229ED9] text-white text-sm font-semibold"
+                  aria-hidden
+                >
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                  </svg>
+                  Войти через Telegram
+                </div>
+                {/* Реальный виджет поверх кнопки — клики идут в iframe Telegram */}
+                <div
+                  ref={widgetRef}
+                  className="absolute inset-0 z-10 flex items-center justify-center opacity-[0.02] [&_iframe]:scale-[4] [&_iframe]:origin-center"
+                />
+              </div>
+            ) : (
+              <div className="text-xs text-amber-400 text-center py-2">
+                Telegram-бот ещё не подключён на сервере.
+              </div>
+            )}
 
-            <div className="flex items-center gap-3 my-5">
-              <div className="h-px flex-1 bg-surface-800" />
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">или</span>
-              <div className="h-px flex-1 bg-surface-800" />
-            </div>
+            {pinEnabled && (
+              <>
+                <div className="flex items-center gap-3 my-5">
+                  <div className="h-px flex-1 bg-surface-800" />
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">или</span>
+                  <div className="h-px flex-1 bg-surface-800" />
+                </div>
 
-            <label className="block text-[11px] font-medium text-slate-400 mb-1.5">PIN-код доступа</label>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                inputMode="numeric"
-                placeholder="••••"
-                className="flex-1 h-11 bg-surface-950 border border-surface-750 rounded-xl px-3.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
-                readOnly
-                tabIndex={-1}
-              />
-              <button
-                type="button"
-                onClick={onContinue}
-                className="h-11 px-4 rounded-xl text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 shadow-md shadow-brand-500/25 transition-colors shrink-0"
-              >
-                Войти
-              </button>
-            </div>
+                <form onSubmit={handlePinLogin}>
+                  <label className="block text-[11px] font-medium text-slate-400 mb-1.5">PIN-код доступа</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value)}
+                      placeholder="••••"
+                      autoComplete="current-password"
+                      className="flex-1 h-11 bg-surface-950 border border-surface-750 rounded-xl px-3.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || !pin.trim()}
+                      className="h-11 px-4 rounded-xl text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 shadow-md shadow-brand-500/25 transition-colors shrink-0 disabled:opacity-50"
+                    >
+                      Войти
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
 
-            <p className="mt-4 text-[11px] text-slate-500 leading-relaxed text-center">
-              Пока макет: кнопки просто открывают студию, авторизации ещё нет.
-            </p>
+            {(error || bootError) && (
+              <div className="mt-4 text-[11px] text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2 text-center">
+                {error || bootError}
+              </div>
+            )}
+
+            {isLocalhost && (
+              <p className="mt-4 text-[11px] text-amber-400/90 leading-relaxed text-center">
+                На localhost виджет Telegram часто не работает — проверяй на проде или через PIN.
+              </p>
+            )}
           </div>
 
           <p className="mt-6 text-center text-[11px] text-slate-600">

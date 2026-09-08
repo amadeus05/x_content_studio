@@ -23,6 +23,7 @@ id = "d5ba3478fd38467a861f7aeca59d8254"
 
 [vars]
 AUTH_PIN = "1234"
+TELEGRAM_BOT_USERNAME = "x_content_studio_bot"
 
 [build]
 command = "npx vite build"

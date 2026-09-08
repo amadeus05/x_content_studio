@@ -1,23 +1,25 @@
 import React, { useState } from "react";
-import { Settings, X, Key, Shield, User, Check, Sparkles } from "lucide-react";
+import { Settings, X, Key, User, Check, Sparkles, LogOut } from "lucide-react";
+import { ApiClient } from "../services/ApiClient.ts";
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   userProfile: { name: string; handle: string; avatarUrl: string };
   onSaveProfile: (profile: { name: string; handle: string; avatarUrl: string }) => void;
+  onLogout?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   userProfile,
-  onSaveProfile
+  onSaveProfile,
+  onLogout
 }) => {
   const [name, setName] = useState(userProfile.name);
   const [handle, setHandle] = useState(userProfile.handle);
   const [avatarUrl, setAvatarUrl] = useState(userProfile.avatarUrl);
-  const [pin, setPin] = useState(localStorage.getItem("xm_auth_pin") || "1234");
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem("xm_gemini_key") || "");
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -26,8 +28,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveProfile({ name, handle, avatarUrl });
-    if (pin) localStorage.setItem("xm_auth_pin", pin);
-    else localStorage.removeItem("xm_auth_pin");
 
     if (geminiKey) localStorage.setItem("xm_gemini_key", geminiKey);
     else localStorage.removeItem("xm_gemini_key");
@@ -53,7 +53,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         <form onSubmit={handleSave} className="p-6 space-y-5">
-          {/* Профиль X */}
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-3 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-sky-400" />
@@ -91,25 +90,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Безопасность / PIN */}
-          <div className="pt-3 border-t border-[#1c2433]">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-2 flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-emerald-400" />
-              Защита Cloudflare (PIN-код)
-            </span>
-            <p className="text-[11px] text-zinc-500 mb-2">
-              Используется для защиты вашего воркера в открытом интернете (передается в заголовке x-auth-pin).
-            </p>
-            <input
-              type="password"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              placeholder="Секретный PIN (по умолчанию 1234)"
-              className="w-full bg-[#121824] border border-[#222c3e] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-            />
-          </div>
-
-          {/* AI Ключ */}
           <div className="pt-3 border-t border-[#1c2433]">
             <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-purple-400" />
@@ -127,21 +107,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#1c2433]">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-[#171e2c] hover:bg-[#20293d] text-xs font-medium text-zinc-300 rounded-lg"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg shadow-md transition"
-            >
-              {savedSuccess ? <Check className="w-4 h-4" /> : null}
-              <span>{savedSuccess ? "Сохранено!" : "Сохранить настройки"}</span>
-            </button>
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#1c2433]">
+            {onLogout ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  await ApiClient.logout();
+                  onLogout();
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-rose-300 hover:bg-rose-500/10 rounded-lg"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Выйти
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-[#171e2c] hover:bg-[#20293d] text-xs font-medium text-zinc-300 rounded-lg"
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                className="flex items-center gap-1.5 px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg shadow-md transition"
+              >
+                {savedSuccess ? <Check className="w-4 h-4" /> : null}
+                <span>{savedSuccess ? "Сохранено!" : "Сохранить настройки"}</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>

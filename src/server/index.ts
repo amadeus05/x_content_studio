@@ -11,6 +11,16 @@ import { PostController } from "./controllers/PostController.ts";
 import { PlaybookController } from "./controllers/PlaybookController.ts";
 import { AiController } from "./controllers/AiController.ts";
 import { MediaController } from "./controllers/MediaController.ts";
+import {
+  clearSessionCookieHeader,
+  createSessionToken,
+  parseAllowedIds,
+  readSessionCookie,
+  sessionCookieHeader,
+  TelegramAuthPayload,
+  verifySessionToken,
+  verifyTelegramLogin
+} from "./auth/telegram.ts";
 
 export type Bindings = {
   DB?: any;
@@ -20,12 +30,58 @@ export type Bindings = {
   AUTH_PIN?: string;
   GEMINI_API_KEY?: string;
   LLM_API_KEY?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_BOT_USERNAME?: string;
+  TELEGRAM_ALLOWED_IDS?: string;
+  SESSION_SECRET?: string;
 };
+
+function processEnv(): Record<string, string | undefined> {
+  return ((globalThis as any).process?.env || {}) as Record<string, string | undefined>;
+}
+
+const CORS_ORIGINS = [
+  "https://x-manager.igris-volium.workers.dev",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173"
+];
+
+function authConfig(c: { env?: Bindings }) {
+  const env = processEnv();
+  const botToken = c.env?.TELEGRAM_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN || "";
+  const authPinRaw = c.env?.AUTH_PIN ?? env.AUTH_PIN;
+  // Не задан — дефолт 1234. Явно "none" — PIN выключен.
+  const authPin =
+    authPinRaw === undefined || authPinRaw === null ? "1234" : String(authPinRaw);
+  const pinEnabled = Boolean(authPin && authPin !== "none");
+  // Подпись сессии: SESSION_SECRET, иначе bot token, иначе только local-dev (никогда AUTH_PIN).
+  const sessionSecret =
+    c.env?.SESSION_SECRET || env.SESSION_SECRET || botToken || "local-dev-session-secret";
+
+  return {
+    botToken,
+    botUsername: c.env?.TELEGRAM_BOT_USERNAME || env.TELEGRAM_BOT_USERNAME || null,
+    allowedIds: parseAllowedIds(c.env?.TELEGRAM_ALLOWED_IDS || env.TELEGRAM_ALLOWED_IDS),
+    authPin,
+    pinEnabled,
+    sessionSecret,
+    telegramEnabled: Boolean(botToken)
+  };
+}
 
 export function createApp(customDb?: IDatabase) {
   const app = new Hono<{ Bindings: Bindings }>();
 
-  app.use("*", cors());
+  app.use(
+    "*",
+    cors({
+      origin: (origin) => {
+        if (!origin) return CORS_ORIGINS[0];
+        return CORS_ORIGINS.includes(origin) ? origin : null;
+      },
+      credentials: true
+    })
+  );
 
   // Хелпер создания контекста сервисов
   function getContext(c: any) {
@@ -45,7 +101,7 @@ export function createApp(customDb?: IDatabase) {
       ? new KvObjectStorage(c.env.MEDIA_KV)
       : new MemoryObjectStorage();
 
-    const envAny = (globalThis as any).process?.env || {};
+    const envAny = processEnv();
     const geminiKey =
       c.req.header("x-gemini-key") ||
       c.env?.GEMINI_API_KEY ||
@@ -71,20 +127,102 @@ export function createApp(customDb?: IDatabase) {
     return c.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Auth Middleware
+  app.get("/api/auth/config", (c) => {
+    const cfg = authConfig(c);
+    return c.json({
+      telegramEnabled: cfg.telegramEnabled,
+      botUsername: cfg.telegramEnabled ? cfg.botUsername : null,
+      pinEnabled: cfg.pinEnabled
+    });
+  });
+
+  app.get("/api/auth/me", async (c) => {
+    const cfg = authConfig(c);
+    const token = readSessionCookie(c.req.header("Cookie"));
+    if (token) {
+      const user = await verifySessionToken(token, cfg.sessionSecret);
+      if (user) return c.json({ authenticated: true, user });
+    }
+    return c.json({ authenticated: false, user: null });
+  });
+
+  app.post("/api/auth/telegram", async (c) => {
+    const cfg = authConfig(c);
+    if (!cfg.botToken) {
+      return c.json({ error: "Telegram вход не настроен" }, 400);
+    }
+    try {
+      const body = (await c.req.json()) as TelegramAuthPayload;
+      const verified = await verifyTelegramLogin(body, cfg.botToken);
+      if (!verified.ok) {
+        return c.json({ error: verified.error }, 401);
+      }
+      if (cfg.allowedIds && !cfg.allowedIds.includes(verified.user.id)) {
+        return c.json({ error: "Этот Telegram-аккаунт не допущен к студии" }, 403);
+      }
+      const session = await createSessionToken(verified.user, cfg.sessionSecret);
+      const secure = new URL(c.req.url).protocol === "https:";
+      c.header("Set-Cookie", sessionCookieHeader(session, secure));
+      return c.json({ authenticated: true, user: verified.user });
+    } catch (err: any) {
+      return c.json({ error: err.message || "Ошибка входа" }, 400);
+    }
+  });
+
+  app.post("/api/auth/pin", async (c) => {
+    const cfg = authConfig(c);
+    if (!cfg.pinEnabled) {
+      return c.json({ error: "PIN-вход отключён" }, 400);
+    }
+    try {
+      const { pin } = await c.req.json();
+      if (String(pin || "") !== cfg.authPin) {
+        return c.json({ error: "Неверный PIN" }, 401);
+      }
+      const user = { id: 0, firstName: "PIN", via: "pin" as const };
+      const session = await createSessionToken(user, cfg.sessionSecret);
+      const secure = new URL(c.req.url).protocol === "https:";
+      c.header("Set-Cookie", sessionCookieHeader(session, secure));
+      return c.json({ authenticated: true, user });
+    } catch (err: any) {
+      return c.json({ error: err.message || "Ошибка входа" }, 400);
+    }
+  });
+
+  app.post("/api/auth/logout", (c) => {
+    const secure = new URL(c.req.url).protocol === "https:";
+    c.header("Set-Cookie", clearSessionCookieHeader(secure));
+    return c.json({ ok: true });
+  });
+
+  // Auth Middleware — только cookie-сессия (PIN/Telegram лишь выдают cookie).
   app.use("/api/*", async (c, next) => {
-    if (c.req.path === "/api/health") {
+    const path = c.req.path;
+    if (
+      path === "/api/health" ||
+      path.startsWith("/api/auth/")
+    ) {
       await next();
       return;
     }
-    const expectedPin = c.env?.AUTH_PIN;
-    if (expectedPin && expectedPin !== "none") {
-      const providedPin = c.req.header("x-auth-pin") || c.req.query("pin");
-      if (providedPin !== expectedPin) {
-        return c.json({ error: "Unauthorized: Invalid or missing PIN" }, 401);
+
+    const cfg = authConfig(c);
+    const needsAuth = cfg.telegramEnabled || cfg.pinEnabled;
+    if (!needsAuth) {
+      await next();
+      return;
+    }
+
+    const cookieToken = readSessionCookie(c.req.header("Cookie"));
+    if (cookieToken) {
+      const user = await verifySessionToken(cookieToken, cfg.sessionSecret);
+      if (user) {
+        await next();
+        return;
       }
     }
-    await next();
+
+    return c.json({ error: "Unauthorized" }, 401);
   });
 
   // --- Posts Routes ---

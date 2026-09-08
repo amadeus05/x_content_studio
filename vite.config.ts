@@ -36,8 +36,15 @@ export default defineConfig(({ mode }) => {
                 body: body && body.length > 0 ? body : undefined
               });
 
-              // Локальный Hono fetch
-              const webResponse = await app.fetch(webRequest);
+              const webResponse = await app.fetch(webRequest, {
+                AUTH_PIN: process.env.AUTH_PIN || "1234",
+                TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+                TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
+                TELEGRAM_ALLOWED_IDS: process.env.TELEGRAM_ALLOWED_IDS,
+                SESSION_SECRET: process.env.SESSION_SECRET,
+                LLM_API_KEY: process.env.LLM_API_KEY,
+                GEMINI_API_KEY: process.env.GEMINI_API_KEY
+              });
 
               res.statusCode = webResponse.status;
               webResponse.headers.forEach((val, key) => {
