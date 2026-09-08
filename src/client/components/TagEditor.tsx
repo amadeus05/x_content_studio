@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { X } from "lucide-react";
 
 interface TagEditorProps {
   tags: string[];
@@ -58,10 +59,7 @@ export const TagEditor: React.FC<TagEditorProps> = ({ tags, onChangeTags }) => {
             className="flex h-5 w-3.5 items-center justify-center text-brand-400 hover:text-rose-400"
             title="Удалить тег"
           >
-            <span className="relative block size-2" aria-hidden>
-              <span className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 -translate-y-1/2 rotate-45 bg-current" />
-              <span className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-current" />
-            </span>
+            <X className="block size-2.5" strokeWidth={2.25} aria-hidden />
           </button>
         </span>
       ))}
