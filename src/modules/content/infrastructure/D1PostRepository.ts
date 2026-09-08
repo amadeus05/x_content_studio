@@ -35,6 +35,7 @@ export class D1PostRepository implements IPostRepository {
 
     const statements: { sql: string; params?: unknown[] }[] = [
       { sql: postSql, params: postParams },
+      { sql: "DELETE FROM post_variants WHERE post_id = ?", params: [post.id] },
       ...post.variants.map((variant) => ({
         sql: variantSql,
         params: [

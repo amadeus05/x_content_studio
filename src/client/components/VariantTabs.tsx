@@ -64,47 +64,45 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
             }
 
             return (
-              <button
+              <div
                 key={v.id}
-                type="button"
-                onClick={() => onSelectVariant(v.id)}
-                className={`group relative flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs transition-colors shrink-0 ${
+                className={`group relative flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs shrink-0 ${
                   isActive
                     ? "font-semibold bg-brand-500 text-white shadow-sm"
                     : "font-medium text-slate-400 hover:text-slate-200 hover:bg-surface-850"
                 }`}
               >
-                <span>{v.variantLabel}</span>
-                <span className={`text-[10px] ${isActive ? "opacity-80 font-normal" : "opacity-70"}`}>
-                  {v.charCount} зн.
-                </span>
-                <span className="hidden group-hover:inline-flex items-center gap-0.5 ml-0.5">
-                  <span
-                    role="button"
+                <button type="button" onClick={() => onSelectVariant(v.id)} className="flex items-center space-x-1.5">
+                  <span>{v.variantLabel}</span>
+                  <span className={`text-[10px] ${isActive ? "opacity-80 font-normal" : "opacity-70"}`}>
+                    {v.charCount} зн.
+                  </span>
+                </button>
+                <span
+                  className={`inline-flex items-center gap-0.5 ${
+                    isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  <button
+                    type="button"
                     title="Переименовать"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEdit(v);
-                    }}
+                    onClick={() => startEdit(v)}
                     className={isActive ? "text-white/80 hover:text-amber-300" : "text-slate-500 hover:text-amber-300"}
                   >
                     <Edit2 className="w-3 h-3" />
-                  </span>
+                  </button>
                   {variants.length > 1 && (
-                    <span
-                      role="button"
+                    <button
+                      type="button"
                       title="Удалить"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteVariant(v.id);
-                      }}
+                      onClick={() => onDeleteVariant(v.id)}
                       className={isActive ? "text-white hover:text-rose-400" : "text-slate-400 hover:text-rose-400"}
                     >
                       <Trash2 className="w-3 h-3" />
-                    </span>
+                    </button>
                   )}
                 </span>
-              </button>
+              </div>
             );
           })}
         </div>
