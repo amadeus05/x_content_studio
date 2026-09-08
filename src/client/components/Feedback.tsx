@@ -1,5 +1,5 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle2, Info, Trash2, X } from "lucide-react";
 
 export type ToastKind = "error" | "success" | "info";
 
@@ -62,6 +62,87 @@ const kindUi: Record<ToastKind, { icon: typeof Info; wrap: string; iconColor: st
   }
 };
 
+const ConfirmOverlay: React.FC<{
+  request: ConfirmRequest;
+  onClose: (ok: boolean) => void;
+}> = ({ request, onClose }) => {
+  const isDelete = /удал/i.test(request.confirmLabel || "") || /удал/i.test(request.title);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+      onClick={() => onClose(false)}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        onClick={(e) => e.stopPropagation()}
+        className="bg-surface-900 border border-surface-750 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-800">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                isDelete
+                  ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                  : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+              }`}
+            >
+              {isDelete ? <Trash2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+            </div>
+            <h3 id="confirm-title" className="text-sm font-bold text-white truncate">
+              {request.title}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => onClose(false)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-surface-850 transition-colors"
+            title="Закрыть"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-5 py-4">
+          <p className="text-xs text-slate-400 leading-relaxed">{request.message}</p>
+        </div>
+
+        <div className="px-5 py-4 border-t border-surface-800 flex items-center justify-end gap-2 bg-surface-950/40">
+          <button
+            type="button"
+            onClick={() => onClose(false)}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-surface-850 hover:bg-surface-800 border border-surface-750 transition-colors"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            autoFocus
+            onClick={() => onClose(true)}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors ${
+              isDelete
+                ? "bg-rose-600 hover:bg-rose-500 shadow-md shadow-rose-900/30"
+                : "bg-brand-500 hover:bg-brand-600 shadow-md shadow-brand-500/25"
+            }`}
+          >
+            {request.confirmLabel || "Подтвердить"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
@@ -70,11 +151,14 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setToasts((list) => list.filter((t) => t.id !== id));
   }, []);
 
-  const toast = useCallback((kind: ToastKind, title: string, message?: string) => {
-    const id = Date.now() + Math.random();
-    setToasts((list) => [...list, { id, kind, title, message }]);
-    window.setTimeout(() => dismiss(id), 5200);
-  }, [dismiss]);
+  const toast = useCallback(
+    (kind: ToastKind, title: string, message?: string) => {
+      const id = Date.now() + Math.random();
+      setToasts((list) => [...list, { id, kind, title, message }]);
+      window.setTimeout(() => dismiss(id), 5200);
+    },
+    [dismiss]
+  );
 
   const error = useCallback(
     (title: string, err?: unknown) => {
@@ -135,37 +219,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         })}
       </div>
 
-      {confirmReq && (
-        <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-surface-900 border border-surface-750 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-            <div className="px-5 pt-5 pb-3 flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">{confirmReq.title}</h3>
-                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{confirmReq.message}</p>
-              </div>
-            </div>
-            <div className="px-5 py-4 flex items-center justify-end gap-2 border-t border-surface-800">
-              <button
-                type="button"
-                onClick={() => closeConfirm(false)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-surface-850 hover:bg-surface-800 border border-surface-750"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={() => closeConfirm(true)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500"
-              >
-                {confirmReq.confirmLabel || "Подтвердить"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {confirmReq && <ConfirmOverlay request={confirmReq} onClose={closeConfirm} />}
     </FeedbackContext.Provider>
   );
 };
