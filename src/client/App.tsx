@@ -362,7 +362,7 @@ export const App: React.FC = () => {
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface-950">
       {/* Top Navbar */}
       <header className="h-14 border-b border-surface-800 bg-surface-900/90 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0 select-none">
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center">
           <div className="flex items-center space-x-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-base">
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -371,13 +371,13 @@ export const App: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <span className="font-bold text-white tracking-tight text-sm">X Content Studio</span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/30">
-                PRO
+              <span className="inline-flex items-center justify-center h-5 px-1.5 rounded text-[10px] font-bold uppercase tracking-wider leading-none bg-brand-500/10 text-brand-400 border border-brand-500/30">
+                <span className="translate-y-[1px]">PRO</span>
               </span>
             </div>
           </div>
 
-          <div className="relative w-72 hidden md:block">
+          <div className="relative w-72 hidden md:block ml-[6.75rem]">
             <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
               <Search className="w-4 h-4" />
             </span>
