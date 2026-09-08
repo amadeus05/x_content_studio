@@ -1,0 +1,29 @@
+{
+  "name": "x-manager",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "d1:migrate:local": "wrangler d1 execute x-manager-db --local --file=./migrations/0001_initial_schema.sql && wrangler d1 execute x-manager-db --local --file=./migrations/0002_seed_playbook.sql && wrangler d1 execute x-manager-db --local --file=./migrations/0003_media.sql",
+    "d1:migrate": "wrangler d1 execute x-manager-db --remote --file=./migrations/0001_initial_schema.sql && wrangler d1 execute x-manager-db --remote --file=./migrations/0002_seed_playbook.sql && wrangler d1 execute x-manager-db --remote --file=./migrations/0003_media.sql",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4.7.1",
+    "lucide-react": "^1.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0",
+    "wrangler": "^3.111.0"
+  }
+}

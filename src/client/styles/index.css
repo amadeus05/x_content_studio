@@ -1,0 +1,100 @@
+:root {
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --bg-app: #080a0f;
+  --bg-sidebar: #0d1117;
+  --bg-surface: #121722;
+  --bg-surface-hover: #192132;
+  --bg-surface-active: #202b40;
+  --border-subtle: #1e2638;
+  --border-strong: #2e3b55;
+  
+  --color-twitter-blue: #1d9bf0;
+  --color-twitter-hover: #1a8cd8;
+  --color-purple-ai: #a855f7;
+  --color-emerald-success: #10b981;
+  --color-amber-warning: #f59e0b;
+  --color-rose-danger: #f43f5e;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  overflow-x: hidden;
+  height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #242c40;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #34405c;
+}
+
+/* Glassmorphic elements */
+.glass-panel {
+  background: rgba(18, 23, 34, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+}
+
+.glow-blue {
+  box-shadow: 0 0 25px -5px rgba(29, 155, 240, 0.25);
+}
+
+.glow-purple {
+  box-shadow: 0 0 25px -5px rgba(168, 85, 247, 0.25);
+}
+
+/* Smooth transitions */
+button, input, textarea, a {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Utilities */
+.tag-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(29, 155, 240, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(29, 155, 240, 0.25);
+}
+
+/* Tweet formatted text highlight for urls and hashtags */
+.tweet-preview-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  font-size: 15px;
+}
+
+.tweet-link {
+  color: var(--color-twitter-blue);
+  text-decoration: none;
+}
+.tweet-link:hover {
+  text-decoration: underline;
+}
