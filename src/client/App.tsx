@@ -297,31 +297,36 @@ export const App: React.FC = () => {
     { id: "ARCHIVED", label: "📦 Архив" }
   ];
 
+  const profileInitials = (() => {
+    const parts = userProfile.name.replace(/\|/g, " ").split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    if (parts[0]?.length >= 2) return parts[0].slice(0, 2).toUpperCase();
+    return (userProfile.handle || "X").slice(0, 2).toUpperCase();
+  })();
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#090c12]">
       {/* Top Navbar */}
-      <header className="h-14 border-b border-[#1c2436] bg-[#0d121c] px-5 flex items-center justify-between shrink-0 select-none z-10">
-        <div className="flex items-center gap-6">
-          {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-md shadow-sky-500/20">
-              <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+      <header className="h-14 border-b border-surface-800 bg-surface-900/90 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0 select-none">
+        <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-base">
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
             </div>
-            <div>
-              <span className="font-bold text-sm text-white tracking-tight flex items-center gap-1.5">
-                𝕏 Content Studio
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30 font-mono">
-                  PRO
-                </span>
+            <div className="flex items-center space-x-2">
+              <span className="font-bold text-white tracking-tight text-sm">X Content Studio</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/30">
+                PRO
               </span>
             </div>
           </div>
 
-          {/* Quick Search */}
-          <div className="relative w-72">
-            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-2.5" />
+          <div className="relative w-72 hidden md:block">
+            <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+              <Search className="w-4 h-4" />
+            </span>
             <input
               id="search-input"
               type="text"
@@ -331,35 +336,59 @@ export const App: React.FC = () => {
                 loadPosts();
               }}
               placeholder="Полнотекстовый поиск... (Ctrl+K)"
-              className="w-full bg-[#131924] border border-[#202a3d] rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-sky-500"
+              className="w-full pl-9 pr-12 py-1.5 text-xs bg-surface-950/80 border border-surface-750/70 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
             />
+            <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+              <kbd className="px-1.5 py-0.5 text-[10px] font-medium text-slate-400 bg-surface-800 border border-surface-700 rounded">
+                ⌘K
+              </kbd>
+            </div>
           </div>
         </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center space-x-3">
           <button
+            type="button"
             onClick={() => setIsPlaybookOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#151c2a] hover:bg-[#1f293d] text-zinc-300 hover:text-white text-xs font-semibold rounded-lg border border-[#243046] transition"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-surface-850 hover:bg-surface-800 border border-surface-750 transition-colors"
           >
-            <BookOpen className="w-3.5 h-3.5 text-purple-400" />
+            <BookOpen className="w-3.5 h-3.5 text-brand-400" />
             <span>Методики & ToV</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-zinc-400 hover:text-white bg-[#151c2a] hover:bg-[#1f293d] rounded-lg border border-[#243046] transition"
-            title="Настройки X и API"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-surface-850 border border-transparent hover:border-surface-750 transition-colors"
+            title="Настройки студии"
           >
             <Settings className="w-4 h-4" />
           </button>
 
+          <div className="h-4 w-px bg-surface-800" />
+
           <button
+            type="button"
             onClick={handleCreatePost}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white text-xs font-bold rounded-lg shadow-md shadow-sky-500/20 transition"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600 shadow-md shadow-brand-500/25 transition-all"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
             <span>Новый черновик</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            title={userProfile.name}
+            className="w-7 h-7 rounded-full bg-gradient-to-tr from-brand-500 to-ai-500 p-[1px] cursor-pointer shrink-0"
+          >
+            <div className="w-full h-full rounded-full bg-surface-900 flex items-center justify-center font-bold text-[11px] text-white overflow-hidden">
+              {userProfile.avatarUrl ? (
+                <img src={userProfile.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                profileInitials
+              )}
+            </div>
           </button>
         </div>
       </header>
