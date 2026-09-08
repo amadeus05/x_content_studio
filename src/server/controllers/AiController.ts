@@ -1,4 +1,4 @@
-import { IAiService } from "../../modules/ai-copilot/domain/services/IAiService.ts";
+import { IAiService, AiGenerationMeta, CritiqueResult } from "../../modules/ai-copilot/domain/services/IAiService.ts";
 import { IPlaybookRepository } from "../../modules/playbook/domain/repositories/IPlaybookRepository.ts";
 import {
   GenerateHooksUseCase,
@@ -25,28 +25,34 @@ export class AiController {
   public async generateHooks(text: string, count: number = 3) {
     const res = await this.generateHooksUseCase.execute(text, count);
     if (res.isFailure) throw new Error(res.getError());
-    return { hooks: res.getValue() };
+    const { data, meta } = res.getValue();
+    return { hooks: data, meta };
   }
 
   public async polish(text: string, instructions: string) {
     const res = await this.polishPostUseCase.execute(text, instructions);
     if (res.isFailure) throw new Error(res.getError());
-    return { result: res.getValue() };
+    const { data, meta } = res.getValue();
+    return { result: data, meta };
   }
 
   public async critique(text: string) {
     const res = await this.critiquePostUseCase.execute(text);
     if (res.isFailure) throw new Error(res.getError());
-    return res.getValue();
+    const { data, meta } = res.getValue();
+    return { ...data, meta };
   }
 
   public async expandToThread(text: string) {
     const res = await this.expandToThreadUseCase.execute(text);
     if (res.isFailure) throw new Error(res.getError());
-    return { tweets: res.getValue() };
+    const { data, meta } = res.getValue();
+    return { tweets: data, meta };
   }
 
   public async testConnection() {
     return await this.aiService.testConnection();
   }
 }
+
+export type { AiGenerationMeta, CritiqueResult };

@@ -52,6 +52,12 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
   const [polishResult, setPolishResult] = useState("");
   const [activeTool, setActiveTool] = useState<FeedKind>("idle");
   const [error, setError] = useState("");
+  const [usedMeta, setUsedMeta] = useState<{
+    label: string;
+    source: string;
+    modelId: string;
+    providerId: string;
+  } | null>(null);
 
   const applyHook = (hook: string) => {
     if (onApplyHook) onApplyHook(hook);
@@ -96,7 +102,9 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
       setCritiqueResult(null);
       setThreadTweets([]);
       setPolishResult("");
-      setGeneratedHooks(await ApiClient.generateHooks(currentText, 3));
+      const res = await ApiClient.generateHooks(currentText, 3);
+      setGeneratedHooks(res.hooks || []);
+      setUsedMeta(res.meta || null);
     });
 
   const handlePunch = () =>
@@ -105,11 +113,12 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
       setGeneratedHooks([]);
       setCritiqueResult(null);
       setThreadTweets([]);
-      const result = await ApiClient.polish(
+      const res = await ApiClient.polish(
         currentText,
         "Сделай Punch: усили концовку и CTA, убери воду, сделай ритм жёстче"
       );
-      setPolishResult(result);
+      setPolishResult(res.result || "");
+      setUsedMeta(res.meta || null);
     });
 
   const handleCritique = () =>
@@ -118,7 +127,9 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
       setGeneratedHooks([]);
       setThreadTweets([]);
       setPolishResult("");
-      setCritiqueResult(await ApiClient.critique(currentText));
+      const res = await ApiClient.critique(currentText);
+      setCritiqueResult(res);
+      setUsedMeta(res.meta || null);
     });
 
   const handleExpandToThread = () =>
@@ -127,7 +138,9 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
       setGeneratedHooks([]);
       setCritiqueResult(null);
       setPolishResult("");
-      setThreadTweets(await ApiClient.expandToThread(currentText));
+      const res = await ApiClient.expandToThread(currentText);
+      setThreadTweets(res.tweets || []);
+      setUsedMeta(res.meta || null);
     });
 
   const handleCustom = () => {
@@ -137,10 +150,22 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
       setGeneratedHooks([]);
       setCritiqueResult(null);
       setThreadTweets([]);
-      const result = await ApiClient.polish(currentText, customPrompt.trim());
-      setPolishResult(result);
+      const res = await ApiClient.polish(currentText, customPrompt.trim());
+      setPolishResult(res.result || "");
+      setUsedMeta(res.meta || null);
     });
   };
+
+  const usedModelBadge = usedMeta ? (
+    <p
+      className={`text-[10px] ${
+        usedMeta.source === "local" ? "text-amber-400/90" : "text-slate-500"
+      }`}
+    >
+      {usedMeta.source === "local" ? "⚠ " : ""}
+      Сгенерировано: {usedMeta.label}
+    </p>
+  ) : null;
 
   const cardClass =
     "p-2.5 rounded-lg bg-[#111827] hover:bg-[#162032] border border-[#1e293b] text-left transition-all disabled:opacity-40 group";
@@ -260,9 +285,12 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
           generatedHooks.map((hook, index) => (
             <div key={index} className="space-y-1.5">
               {index === 0 && (
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-                  <span className="font-medium text-[#a78bfa]">Сгенерированные хуки:</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+                    <span className="font-medium text-[#a78bfa]">Сгенерированные хуки:</span>
+                  </div>
+                  {usedModelBadge}
                 </div>
               )}
               <div className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed space-y-2">
@@ -290,9 +318,12 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
 
         {activeTool === "polish" && polishResult && (
           <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-              <span className="font-medium text-[#a78bfa]">Punch / правка:</span>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+                <span className="font-medium text-[#a78bfa]">Punch / правка:</span>
+              </div>
+              {usedModelBadge}
             </div>
             <div className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed space-y-2">
               <p className="whitespace-pre-wrap">{polishResult}</p>
@@ -309,9 +340,12 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
 
         {activeTool === "critique" && critiqueResult && (
           <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-              <span className="font-medium text-[#a78bfa]">Анализ текущего хука:</span>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+                <span className="font-medium text-[#a78bfa]">Анализ текущего хука:</span>
+              </div>
+              {usedModelBadge}
             </div>
             <div className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed space-y-2">
               <p>
@@ -343,9 +377,12 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
 
         {activeTool === "thread" && threadTweets.length > 0 && (
           <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-              <span className="font-medium text-[#a78bfa]">Тред ({threadTweets.length} твита):</span>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+                <span className="font-medium text-[#a78bfa]">Тред ({threadTweets.length} твита):</span>
+              </div>
+              {usedModelBadge}
             </div>
             {threadTweets.map((tw, index) => (
               <div key={index} className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed">

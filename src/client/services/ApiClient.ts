@@ -232,26 +232,30 @@ export class ApiClient {
   }
 
   // --- AI ---
-  public static async generateHooks(text: string, count: number = 3): Promise<string[]> {
+  public static async generateHooks(
+    text: string,
+    count: number = 3
+  ): Promise<{ hooks: string[]; meta?: { label: string; source: string; modelId: string; providerId: string } }> {
     const res = await this.request("/api/ai/hooks", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ text, count })
     });
     if (!res.ok) throw new Error(await this.parseError(res));
-    const data = await res.json();
-    return data.hooks;
+    return res.json();
   }
 
-  public static async polish(text: string, instructions: string): Promise<string> {
+  public static async polish(
+    text: string,
+    instructions: string
+  ): Promise<{ result: string; meta?: { label: string; source: string; modelId: string; providerId: string } }> {
     const res = await this.request("/api/ai/polish", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ text, instructions })
     });
     if (!res.ok) throw new Error(await this.parseError(res));
-    const data = await res.json();
-    return data.result;
+    return res.json();
   }
 
   public static async critique(text: string): Promise<any> {
@@ -264,15 +268,16 @@ export class ApiClient {
     return res.json();
   }
 
-  public static async expandToThread(text: string): Promise<string[]> {
+  public static async expandToThread(
+    text: string
+  ): Promise<{ tweets: string[]; meta?: { label: string; source: string; modelId: string; providerId: string } }> {
     const res = await this.request("/api/ai/thread", {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ text })
     });
     if (!res.ok) throw new Error(await this.parseError(res));
-    const data = await res.json();
-    return data.tweets;
+    return res.json();
   }
 
   // --- Media ---
