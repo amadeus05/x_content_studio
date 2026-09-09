@@ -55,6 +55,7 @@ export class MemoryDatabaseAdapter implements IDatabase {
   private static instance: MemoryDatabaseAdapter;
   private posts: Map<string, any> = new Map();
   private variants: Map<string, any> = new Map();
+  private bodies: Map<string, any> = new Map();
   private methodologies: Map<string, any> = new Map();
   private toneProfiles: Map<string, any> = new Map();
   private media: Map<string, any> = new Map();
@@ -116,6 +117,7 @@ export class MemoryDatabaseAdapter implements IDatabase {
     // Начальный пример черновика
     const samplePostId = "sample-post-1";
     const sampleVariantId = "sample-variant-1";
+    const sampleBodyId = "sample-body-1";
 
     this.posts.set(samplePostId, {
       id: samplePostId,
@@ -130,12 +132,23 @@ export class MemoryDatabaseAdapter implements IDatabase {
       updated_at: new Date().toISOString()
     });
 
+    this.bodies.set(sampleBodyId, {
+      id: sampleBodyId,
+      post_id: samplePostId,
+      text: "Вот 3 системных промпта, которые превращают AI в персонального редактора:\n\n1. Ролевой контекст\n2. Ограничение по ToV\n3. Запрет на штампы\n\nСохраняйте в закладки 🔖",
+      body_label: "Тело 1 (Тезисы)",
+      order_index: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
     this.variants.set(sampleVariantId, {
       id: sampleVariantId,
       post_id: samplePostId,
       hook: "Большинство людей используют ChatGPT как продвинутый Google и упускают 90% его силы.",
       body: "Вот 3 системных промпта, которые превращают AI в персонального редактора:\n\n1. Ролевой контекст\n2. Ограничение по ToV\n3. Запрет на штампы\n\nСохраняйте в закладки 🔖",
       variant_label: "Вариант 1 (Провокация)",
+      pinned_body_id: sampleBodyId,
       order_index: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -171,6 +184,15 @@ export class MemoryDatabaseAdapter implements IDatabase {
       return Array.from(this.variants.values()) as unknown as T[];
     }
 
+    if (lower.startsWith("select * from post_bodies") || lower.includes("from post_bodies")) {
+      if (lower.includes("where post_id =")) {
+        const postId = params[0] as string;
+        const filtered = Array.from(this.bodies.values()).filter((b) => b.post_id === postId);
+        return filtered as unknown as T[];
+      }
+      return Array.from(this.bodies.values()) as unknown as T[];
+    }
+
     if (lower.includes("from methodologies")) {
       return Array.from(this.methodologies.values()) as unknown as T[];
     }
@@ -199,13 +221,28 @@ export class MemoryDatabaseAdapter implements IDatabase {
     }
 
     if (lower.startsWith("insert into post_variants") || lower.startsWith("insert or replace into post_variants")) {
-      const [id, post_id, hook, body, variant_label, order_index, created_at, updated_at] = params as any[];
+      const [id, post_id, hook, body, variant_label, order_index, created_at, updated_at, pinned_body_id] = params as any[];
       this.variants.set(id, {
         id,
         post_id,
         hook,
         body,
         variant_label,
+        order_index,
+        created_at,
+        updated_at,
+        pinned_body_id: pinned_body_id ?? null
+      });
+      return { success: true, changes: 1 };
+    }
+
+    if (lower.startsWith("insert into post_bodies") || lower.startsWith("insert or replace into post_bodies")) {
+      const [id, post_id, text, body_label, order_index, created_at, updated_at] = params as any[];
+      this.bodies.set(id, {
+        id,
+        post_id,
+        text,
+        body_label,
         order_index,
         created_at,
         updated_at
@@ -254,9 +291,12 @@ export class MemoryDatabaseAdapter implements IDatabase {
     if (lower.startsWith("delete from posts where id =")) {
       const id = params[0] as string;
       this.posts.delete(id);
-      // каскадное удаление вариантов
+      // каскадное удаление вариантов и тел
       for (const [vid, v] of this.variants.entries()) {
         if (v.post_id === id) this.variants.delete(vid);
+      }
+      for (const [bid, b] of this.bodies.entries()) {
+        if (b.post_id === id) this.bodies.delete(bid);
       }
       return { success: true, changes: 1 };
     }
@@ -271,6 +311,20 @@ export class MemoryDatabaseAdapter implements IDatabase {
       const postId = params[0] as string;
       for (const [vid, v] of this.variants.entries()) {
         if (v.post_id === postId) this.variants.delete(vid);
+      }
+      return { success: true, changes: 1 };
+    }
+
+    if (lower.startsWith("delete from post_bodies where id =")) {
+      const id = params[0] as string;
+      this.bodies.delete(id);
+      return { success: true, changes: 1 };
+    }
+
+    if (lower.startsWith("delete from post_bodies where post_id =")) {
+      const postId = params[0] as string;
+      for (const [bid, b] of this.bodies.entries()) {
+        if (b.post_id === postId) this.bodies.delete(bid);
       }
       return { success: true, changes: 1 };
     }

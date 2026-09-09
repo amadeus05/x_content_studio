@@ -182,6 +182,112 @@ export class ApiClient {
     return res.json();
   }
 
+  // --- Hooks API ---
+  public static async addHook(
+    id: string,
+    data: { text?: string; label?: string; pinnedBodyId?: string | null }
+  ): Promise<PostDto> {
+    const res = await this.request(`/api/posts/${id}/hooks`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  public static async selectHook(id: string, hookId: string): Promise<PostDto> {
+    const res = await this.request(`/api/posts/${id}/hooks/${hookId}/select`, {
+      method: "PUT",
+      headers: this.getHeaders()
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  public static async updateHook(
+    id: string,
+    hookId: string,
+    data: { text?: string; label?: string }
+  ): Promise<PostDto> {
+    const res = await this.request(`/api/posts/${id}/hooks/${hookId}`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  public static async deleteHook(id: string, hookId: string): Promise<PostDto> {
+    const res = await this.request(`/api/posts/${id}/hooks/${hookId}`, {
+      method: "DELETE",
+      headers: this.getHeaders()
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  public static async pinBodyToHook(
+    id: string,
+    hookId: string,
+    bodyId: string | null
+  ): Promise<PostDto> {
+    const res = await this.request(`/api/posts/${id}/hooks/${hookId}/pin-body`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ bodyId })
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  // --- Bodies API ---
+  public static async addBody(
+    id: string,
+    data: { text?: string; label?: string }
+  ): Promise<PostDto> {
+    const res = await this.request(`/api/posts/${id}/bodies`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  public static async selectBody(id: string, bodyId: string): Promise<PostDto> {
+    const res = await this.request(`/api/posts/${id}/bodies/${bodyId}/select`, {
+      method: "PUT",
+      headers: this.getHeaders()
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  public static async updateBody(
+    id: string,
+    bodyId: string,
+    data: { text?: string; label?: string }
+  ): Promise<PostDto> {
+    const res = await this.request(`/api/posts/${id}/bodies/${bodyId}`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
+  public static async deleteBody(id: string, bodyId: string): Promise<PostDto> {
+    const res = await this.request(`/api/posts/${id}/bodies/${bodyId}`, {
+      method: "DELETE",
+      headers: this.getHeaders()
+    });
+    if (!res.ok) throw new Error(await this.parseError(res));
+    return res.json();
+  }
+
   public static async deletePost(id: string): Promise<void> {
     const res = await this.request(`/api/posts/${id}`, {
       method: "DELETE",

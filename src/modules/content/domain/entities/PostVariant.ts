@@ -8,6 +8,7 @@ export interface PostVariantProps {
   body: string;
   variantLabel: string;
   orderIndex: number;
+  pinnedBodyId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +32,10 @@ export class PostVariant extends Entity<PostVariantProps> {
 
   get variantLabel(): string {
     return this.props.variantLabel;
+  }
+
+  get pinnedBodyId(): string | null | undefined {
+    return this.props.pinnedBodyId;
   }
 
   get orderIndex(): number {
@@ -69,12 +74,18 @@ export class PostVariant extends Entity<PostVariantProps> {
     this.props.updatedAt = new Date();
   }
 
+  public setPinnedBody(bodyId: string | null): void {
+    this.props.pinnedBodyId = bodyId || null;
+    this.props.updatedAt = new Date();
+  }
+
   public static create(
     props: {
       postId: string;
       hook?: string;
       body?: string;
       variantLabel?: string;
+      pinnedBodyId?: string | null;
       orderIndex?: number;
       createdAt?: Date;
       updatedAt?: Date;
@@ -88,6 +99,7 @@ export class PostVariant extends Entity<PostVariantProps> {
         hook: props.hook || "",
         body: props.body || "",
         variantLabel: props.variantLabel || "Вариант 1",
+        pinnedBodyId: props.pinnedBodyId ?? null,
         orderIndex: props.orderIndex ?? 0,
         createdAt: props.createdAt ?? now,
         updatedAt: props.updatedAt ?? now

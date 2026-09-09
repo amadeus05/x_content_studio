@@ -314,6 +314,111 @@ export function createApp(customDb?: IDatabase) {
     }
   });
 
+  // --- Hooks Routes ---
+  app.post("/api/posts/:id/hooks", async (c) => {
+    const { postController } = getContext(c);
+    try {
+      const body = await c.req.json();
+      const post = await postController.addHook(c.req.param("id"), body);
+      return c.json(post, 201);
+    } catch (err: any) {
+      return c.json({ error: err.message }, 400);
+    }
+  });
+
+  app.put("/api/posts/:id/hooks/:hookId", async (c) => {
+    const { postController } = getContext(c);
+    try {
+      const body = await c.req.json();
+      const post = await postController.updateHook(c.req.param("id"), c.req.param("hookId"), body);
+      return c.json(post);
+    } catch (err: any) {
+      return c.json({ error: err.message }, 400);
+    }
+  });
+
+  const handleSelectHook = async (c: any) => {
+    const { postController } = getContext(c);
+    try {
+      const post = await postController.selectHook(c.req.param("id"), c.req.param("hookId"));
+      return c.json(post);
+    } catch (err: any) {
+      return c.json({ error: err.message }, 400);
+    }
+  };
+  app.put("/api/posts/:id/hooks/:hookId/select", handleSelectHook);
+  app.post("/api/posts/:id/hooks/:hookId/select", handleSelectHook);
+
+  const handlePinBody = async (c: any) => {
+    const { postController } = getContext(c);
+    try {
+      const { bodyId } = await c.req.json();
+      const post = await postController.pinBodyToHook(c.req.param("id"), c.req.param("hookId"), bodyId ?? null);
+      return c.json(post);
+    } catch (err: any) {
+      return c.json({ error: err.message }, 400);
+    }
+  };
+  app.post("/api/posts/:id/hooks/:hookId/pin-body", handlePinBody);
+  app.put("/api/posts/:id/hooks/:hookId/pin-body", handlePinBody);
+
+  app.delete("/api/posts/:id/hooks/:hookId", async (c) => {
+    const { postController, mediaController } = getContext(c);
+    try {
+      const hookId = c.req.param("hookId");
+      await mediaController.deleteOwner("post_variant", hookId);
+      const post = await postController.deleteHook(c.req.param("id"), hookId);
+      return c.json(post);
+    } catch (err: any) {
+      return c.json({ error: err.message }, 400);
+    }
+  });
+
+  // --- Bodies Routes ---
+  app.post("/api/posts/:id/bodies", async (c) => {
+    const { postController } = getContext(c);
+    try {
+      const body = await c.req.json();
+      const post = await postController.addBody(c.req.param("id"), body);
+      return c.json(post, 201);
+    } catch (err: any) {
+      return c.json({ error: err.message }, 400);
+    }
+  });
+
+  app.put("/api/posts/:id/bodies/:bodyId", async (c) => {
+    const { postController } = getContext(c);
+    try {
+      const body = await c.req.json();
+      const post = await postController.updateBody(c.req.param("id"), c.req.param("bodyId"), body);
+      return c.json(post);
+    } catch (err: any) {
+      return c.json({ error: err.message }, 400);
+    }
+  });
+
+  const handleSelectBody = async (c: any) => {
+    const { postController } = getContext(c);
+    try {
+      const post = await postController.selectBody(c.req.param("id"), c.req.param("bodyId"));
+      return c.json(post);
+    } catch (err: any) {
+      return c.json({ error: err.message }, 400);
+    }
+  };
+  app.put("/api/posts/:id/bodies/:bodyId/select", handleSelectBody);
+  app.post("/api/posts/:id/bodies/:bodyId/select", handleSelectBody);
+
+  app.delete("/api/posts/:id/bodies/:bodyId", async (c) => {
+    const { postController } = getContext(c);
+    try {
+      const post = await postController.deleteBody(c.req.param("id"), c.req.param("bodyId"));
+      return c.json(post);
+    } catch (err: any) {
+      return c.json({ error: err.message }, 400);
+    }
+  });
+
   app.delete("/api/posts/:id", async (c) => {
     const { postController, mediaController } = getContext(c);
     try {

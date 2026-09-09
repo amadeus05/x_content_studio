@@ -20,7 +20,10 @@ interface AiCopilotPanelProps {
   currentText: string;
   onApplyText: (newText: string) => void;
   onApplyHook?: (hook: string) => void;
-  onAddAsVariant: (hookText: string) => void;
+  onAddHook?: (hook: string) => void;
+  onApplyBody?: (body: string) => void;
+  onAddBody?: (body: string) => void;
+  onAddAsVariant?: (hookText: string) => void;
 }
 
 const DEFAULT_ALT_HOOK =
@@ -32,6 +35,9 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
   currentText,
   onApplyText,
   onApplyHook,
+  onAddHook,
+  onApplyBody,
+  onAddBody,
   onAddAsVariant
 }) => {
   const [loading, setLoading] = useState(false);
@@ -62,6 +68,21 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
   const applyHook = (hook: string) => {
     if (onApplyHook) onApplyHook(hook);
     else onApplyText(hook);
+  };
+
+  const addHook = (hook: string) => {
+    if (onAddHook) onAddHook(hook);
+    else if (onAddAsVariant) onAddAsVariant(hook);
+  };
+
+  const applyBody = (body: string) => {
+    if (onApplyBody) onApplyBody(body);
+    else onApplyText(body);
+  };
+
+  const addBody = (body: string) => {
+    if (onAddBody) onAddBody(body);
+    else onApplyText(body);
   };
 
   useEffect(() => {
@@ -301,15 +322,15 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
                     onClick={() => applyHook(hook)}
                     className="flex-1 py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
                   >
-                    Заменить в редакторе
+                    Заменить хук
                   </button>
                   <button
                     type="button"
-                    onClick={() => onAddAsVariant(hook)}
-                    className="flex items-center justify-center gap-1 px-2 py-1 text-[11px] font-semibold text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 rounded"
+                    onClick={() => addHook(hook)}
+                    className="flex items-center justify-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 rounded"
                   >
                     <Plus className="w-3 h-3" />
-                    Вариант
+                    + Хук
                   </button>
                 </div>
               </div>
@@ -320,20 +341,30 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
           <div className="space-y-1.5">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-                <span className="font-medium text-[#a78bfa]">Punch / правка:</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="font-medium text-emerald-400">Punch / правка:</span>
               </div>
               {usedModelBadge}
             </div>
             <div className="p-3 rounded-xl bg-[#080c14] border border-[#162032] text-xs text-slate-300 leading-relaxed space-y-2">
               <p className="whitespace-pre-wrap">{polishResult}</p>
-              <button
-                type="button"
-                onClick={() => onApplyText(polishResult)}
-                className="w-full py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
-              >
-                Заменить в редакторе
-              </button>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => applyBody(polishResult)}
+                  className="flex-1 py-1 text-center text-[11px] font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 rounded transition-colors"
+                >
+                  Заменить тело
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addBody(polishResult)}
+                  className="flex items-center justify-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 rounded"
+                >
+                  <Plus className="w-3 h-3" />
+                  + Тело
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -363,13 +394,23 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
                 </div>
               )}
               {critiqueResult.suggestedRewrite && (
-                <button
-                  type="button"
-                  onClick={() => onApplyText(critiqueResult.suggestedRewrite)}
-                  className="w-full py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
-                >
-                  Заменить в редакторе
-                </button>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => applyHook(critiqueResult.suggestedRewrite)}
+                    className="flex-1 py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
+                  >
+                    Заменить хук
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addHook(critiqueResult.suggestedRewrite)}
+                    className="flex items-center justify-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 rounded"
+                  >
+                    <Plus className="w-3 h-3" />
+                    + Хук
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -379,8 +420,8 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
           <div className="space-y-1.5">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-                <span className="font-medium text-[#a78bfa]">Тред ({threadTweets.length} твита):</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="font-medium text-emerald-400">Тред ({threadTweets.length} твита):</span>
               </div>
               {usedModelBadge}
             </div>
@@ -389,13 +430,23 @@ export const AiCopilotPanel: React.FC<AiCopilotPanelProps> = ({
                 <p>{tw}</p>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() => onApplyText(threadTweets.join("\n\n"))}
-              className="w-full py-1 text-center text-[11px] font-semibold text-[#a78bfa] hover:text-[#c4b5fd] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 rounded transition-colors"
-            >
-              Заменить в редакторе
-            </button>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => applyBody(threadTweets.join("\n\n"))}
+                className="flex-1 py-1 text-center text-[11px] font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 rounded transition-colors"
+              >
+                Заменить тело тредом
+              </button>
+              <button
+                type="button"
+                onClick={() => addBody(threadTweets.join("\n\n"))}
+                className="flex items-center justify-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 rounded"
+              >
+                <Plus className="w-3 h-3" />
+                + Тело (тред)
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -8,6 +8,19 @@ import {
   DeletePostVariantUseCase
 } from "../../modules/content/application/use-cases/AddPostVariantUseCase.ts";
 import {
+  AddPostHookUseCase,
+  SelectPostHookUseCase,
+  UpdatePostHookUseCase,
+  DeletePostHookUseCase,
+  PinBodyToHookUseCase
+} from "../../modules/content/application/use-cases/PostHookUseCases.ts";
+import {
+  AddPostBodyUseCase,
+  SelectPostBodyUseCase,
+  UpdatePostBodyUseCase,
+  DeletePostBodyUseCase
+} from "../../modules/content/application/use-cases/PostBodyUseCases.ts";
+import {
   SearchPostsUseCase,
   GetPostByIdUseCase,
   DeletePostUseCase,
@@ -26,6 +39,17 @@ export class PostController {
   private readonly deletePostUseCase: DeletePostUseCase;
   private readonly getAllTagsUseCase: GetAllTagsUseCase;
 
+  private readonly addHookUseCase: AddPostHookUseCase;
+  private readonly selectHookUseCase: SelectPostHookUseCase;
+  private readonly updateHookUseCase: UpdatePostHookUseCase;
+  private readonly deleteHookUseCase: DeletePostHookUseCase;
+  private readonly pinBodyUseCase: PinBodyToHookUseCase;
+
+  private readonly addBodyUseCase: AddPostBodyUseCase;
+  private readonly selectBodyUseCase: SelectPostBodyUseCase;
+  private readonly updateBodyUseCase: UpdatePostBodyUseCase;
+  private readonly deleteBodyUseCase: DeletePostBodyUseCase;
+
   constructor(repo: IPostRepository) {
     this.createPostUseCase = new CreatePostUseCase(repo);
     this.updatePostUseCase = new UpdatePostContentUseCase(repo);
@@ -37,6 +61,17 @@ export class PostController {
     this.getPostByIdUseCase = new GetPostByIdUseCase(repo);
     this.deletePostUseCase = new DeletePostUseCase(repo);
     this.getAllTagsUseCase = new GetAllTagsUseCase(repo);
+
+    this.addHookUseCase = new AddPostHookUseCase(repo);
+    this.selectHookUseCase = new SelectPostHookUseCase(repo);
+    this.updateHookUseCase = new UpdatePostHookUseCase(repo);
+    this.deleteHookUseCase = new DeletePostHookUseCase(repo);
+    this.pinBodyUseCase = new PinBodyToHookUseCase(repo);
+
+    this.addBodyUseCase = new AddPostBodyUseCase(repo);
+    this.selectBodyUseCase = new SelectPostBodyUseCase(repo);
+    this.updateBodyUseCase = new UpdatePostBodyUseCase(repo);
+    this.deleteBodyUseCase = new DeletePostBodyUseCase(repo);
   }
 
   public async getPosts(query: { status?: string; search?: string; tag?: string }) {
@@ -67,6 +102,66 @@ export class PostController {
     if (res.isFailure) throw new Error(res.getError());
     return res.getValue();
   }
+
+  // === Hooks ===
+
+  public async addHook(id: string, body: any) {
+    const res = await this.addHookUseCase.execute({ postId: id, ...body });
+    if (res.isFailure) throw new Error(res.getError());
+    return res.getValue();
+  }
+
+  public async selectHook(id: string, hookId: string) {
+    const res = await this.selectHookUseCase.execute(id, hookId);
+    if (res.isFailure) throw new Error(res.getError());
+    return res.getValue();
+  }
+
+  public async updateHook(id: string, hookId: string, body: any) {
+    const res = await this.updateHookUseCase.execute(id, hookId, body);
+    if (res.isFailure) throw new Error(res.getError());
+    return res.getValue();
+  }
+
+  public async deleteHook(id: string, hookId: string) {
+    const res = await this.deleteHookUseCase.execute(id, hookId);
+    if (res.isFailure) throw new Error(res.getError());
+    return res.getValue();
+  }
+
+  public async pinBodyToHook(id: string, hookId: string, bodyId: string | null) {
+    const res = await this.pinBodyUseCase.execute(id, hookId, bodyId);
+    if (res.isFailure) throw new Error(res.getError());
+    return res.getValue();
+  }
+
+  // === Bodies ===
+
+  public async addBody(id: string, body: any) {
+    const res = await this.addBodyUseCase.execute({ postId: id, ...body });
+    if (res.isFailure) throw new Error(res.getError());
+    return res.getValue();
+  }
+
+  public async selectBody(id: string, bodyId: string) {
+    const res = await this.selectBodyUseCase.execute(id, bodyId);
+    if (res.isFailure) throw new Error(res.getError());
+    return res.getValue();
+  }
+
+  public async updateBody(id: string, bodyId: string, body: any) {
+    const res = await this.updateBodyUseCase.execute(id, bodyId, body);
+    if (res.isFailure) throw new Error(res.getError());
+    return res.getValue();
+  }
+
+  public async deleteBody(id: string, bodyId: string) {
+    const res = await this.deleteBodyUseCase.execute(id, bodyId);
+    if (res.isFailure) throw new Error(res.getError());
+    return res.getValue();
+  }
+
+  // === Legacy Variants API ===
 
   public async addVariant(id: string, body: any) {
     const res = await this.addVariantUseCase.execute({ postId: id, ...body });

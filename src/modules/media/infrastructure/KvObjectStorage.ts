@@ -30,7 +30,10 @@ export class KvObjectStorage implements IObjectStorage {
   }
 
   public async get(key: string): Promise<StoredObject | null> {
-    const direct = await this.kv.getWithMetadata<ChunkMeta>(key, { type: "arrayBuffer" });
+    const direct = (await (this.kv as any).getWithMetadata(key, { type: "arrayBuffer" })) as {
+      value?: ArrayBuffer;
+      metadata?: ChunkMeta;
+    };
     if (direct.value) {
       const mimeType = direct.metadata?.mimeType || "application/octet-stream";
       return { body: direct.value, mimeType };

@@ -5,14 +5,20 @@ import {
   Settings,
   ExternalLink,
   Info,
-  Check
+  Check,
+  Pin
 } from "lucide-react";
 import { ApiClient } from "./services/ApiClient.ts";
 import type { AuthConfig } from "./services/ApiClient.ts";
-import { PostDto } from "../modules/content/application/dtos/PostDto.ts";
+import {
+  PostDto,
+  PostHookDto,
+  PostBodyDto,
+  PostVariantDto
+} from "../modules/content/application/dtos/PostDto.ts";
 import { MethodologyDto, ToneProfileDto } from "../modules/playbook/application/use-cases/GetPlaybookUseCase.ts";
 import { TwitterPreview } from "./components/TwitterPreview.tsx";
-import { VariantTabs } from "./components/VariantTabs.tsx";
+import { ContentTabs } from "./components/ContentTabs.tsx";
 import { PlaybookModal } from "./components/PlaybookModal.tsx";
 import { AiCopilotPanel } from "./components/AiCopilotPanel.tsx";
 import { PostCard } from "./components/PostCard.tsx";
@@ -196,7 +202,74 @@ export const App: React.FC = () => {
   }, []);
 
   const selectedPost = posts.find((p) => p.id === selectedPostId) || posts[0];
-  const activeVariant = selectedPost?.activeVariant;
+
+  // Пулы хуков и тел выбранного поста с безопасным fallback
+  const hooks: PostHookDto[] =
+    selectedPost?.hooks && selectedPost.hooks.length > 0
+      ? selectedPost.hooks
+      : [
+          {
+            id: selectedPost?.activeVariantId || "default-hook",
+            postId: selectedPost?.id || "",
+            label: selectedPost?.activeVariant?.variantLabel || "Хук 1",
+            text: selectedPost?.activeVariant?.hook || "",
+            pinnedBodyId: null,
+            orderIndex: 0,
+            charCount: [...(selectedPost?.activeVariant?.hook || "")].length,
+            createdAt: selectedPost?.createdAt || new Date().toISOString(),
+            updatedAt: selectedPost?.updatedAt || new Date().toISOString()
+          }
+        ];
+
+  const bodies: PostBodyDto[] =
+    selectedPost?.bodies && selectedPost.bodies.length > 0
+      ? selectedPost.bodies
+      : [
+          {
+            id: "default-body",
+            postId: selectedPost?.id || "",
+            label: "Тело 1",
+            text: selectedPost?.activeVariant?.body || "",
+            orderIndex: 0,
+            charCount: [...(selectedPost?.activeVariant?.body || "")].length,
+            createdAt: selectedPost?.createdAt || new Date().toISOString(),
+            updatedAt: selectedPost?.updatedAt || new Date().toISOString()
+          }
+        ];
+
+  const activeHook: PostHookDto =
+    hooks.find((h) => h.id === selectedPost?.activeHookId) ||
+    hooks.find((h) => h.id === selectedPost?.activeVariantId) ||
+    hooks[0];
+
+  const activeBody: PostBodyDto =
+    bodies.find((b) => b.id === selectedPost?.activeBodyId) ||
+    bodies[0];
+
+  const hookText = activeHook?.text || "";
+  const bodyText = activeBody?.text || "";
+  const fullCombinedText =
+    hookText && bodyText ? `${hookText}\n\n${bodyText}` : hookText || bodyText;
+  const totalChars = [...fullCombinedText].length;
+  const remainingChars = 280 - totalChars;
+  const isOverLimit = totalChars > 280;
+
+  const previewVariant: PostVariantDto = {
+    id: activeHook ? activeHook.id : "preview-id",
+    postId: selectedPost ? selectedPost.id : "",
+    hook: hookText,
+    body: bodyText,
+    fullText: fullCombinedText,
+    variantLabel: activeHook ? activeHook.label : "Вариант",
+    pinnedBodyId: activeHook?.pinnedBodyId ?? null,
+    orderIndex: activeHook ? activeHook.orderIndex : 0,
+    charCount: totalChars,
+    remainingChars,
+    isOverLimit,
+    isPremium: totalChars > 280,
+    createdAt: activeHook ? activeHook.createdAt : new Date().toISOString(),
+    updatedAt: activeHook ? activeHook.updatedAt : new Date().toISOString()
+  };
 
   // Создание нового черновика
   const handleCreatePost = async () => {
@@ -237,42 +310,252 @@ export const App: React.FC = () => {
     }
   };
 
-  // Изменение контента активного варианта (hook / body)
-  const handleContentChange = (newHook: string, newBody: string) => {
-    if (!selectedPost || !activeVariant) return;
+  // Выбор активного хука (с авто-переключением закрепленного тела)
+  const handleSelectHook = async (hookId: string) => {
+    if (!selectedPost) return;
+    const targetHook = hooks.find((h) => h.id === hookId);
+    let targetBodyId = selectedPost.activeBodyId;
+    if (targetHook?.pinnedBodyId && bodies.some((b) => b.id === targetHook.pinnedBodyId)) {
+      targetBodyId = targetHook.pinnedBodyId;
+    }
 
-    const updatedVariants = selectedPost.variants.map((v) =>
-      v.id === activeVariant.id
-        ? {
-            ...v,
-            hook: newHook,
-            body: newBody,
-            fullText: newHook ? `${newHook}\n\n${newBody}` : newBody,
-            charCount: [...(newHook ? `${newHook}\n\n${newBody}` : newBody)].length,
-            remainingChars: 280 - [...(newHook ? `${newHook}\n\n${newBody}` : newBody)].length,
-            isOverLimit: [...(newHook ? `${newHook}\n\n${newBody}` : newBody)].length > 280
-          }
-        : v
+    const updatedPost: PostDto = {
+      ...selectedPost,
+      activeHookId: hookId,
+      activeVariantId: hookId,
+      activeBodyId: targetBodyId
+    };
+    setPosts(posts.map((p) => (p.id === selectedPost.id ? updatedPost : p)));
+
+    try {
+      const updated = await ApiClient.selectHook(selectedPost.id, hookId);
+      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err: any) {
+      console.error("Select hook error:", err);
+    }
+  };
+
+  // Добавление хука
+  const handleAddHook = async (label?: string, text?: string) => {
+    if (!selectedPost) return;
+    try {
+      const updated = await ApiClient.addHook(selectedPost.id, {
+        label: label || `Хук ${hooks.length + 1}`,
+        text: text || ""
+      });
+      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err: any) {
+      feedback.error("Не удалось добавить хук", err);
+    }
+  };
+
+  // Удаление хука
+  const handleDeleteHook = async (hookId: string) => {
+    if (!selectedPost || hooks.length <= 1) return;
+    const targetHook = hooks.find((h) => h.id === hookId);
+    const ok = await feedback.confirm({
+      title: "Удалить хук?",
+      message: targetHook?.label
+        ? `Хук «${targetHook.label}» будет удалён без восстановления.`
+        : "Хук будет удалён без восстановления.",
+      confirmLabel: "Удалить"
+    });
+    if (!ok) return;
+
+    const previous = posts;
+    const nextHooks = hooks.filter((h) => h.id !== hookId);
+    const nextActiveHook = nextHooks.find((h) => h.id === selectedPost.activeHookId) || nextHooks[0];
+    setPosts(
+      posts.map((p) =>
+        p.id === selectedPost.id
+          ? {
+              ...p,
+              hooks: nextHooks,
+              activeHookId: nextActiveHook.id,
+              activeVariantId: nextActiveHook.id,
+              activeHook: nextActiveHook
+            }
+          : p
+      )
     );
 
-    const updatedPost = {
-      ...selectedPost,
-      variants: updatedVariants,
-      activeVariant: updatedVariants.find((v) => v.id === activeVariant.id)!
-    };
+    try {
+      const updated = await ApiClient.deleteHook(selectedPost.id, hookId);
+      setPosts((current) => current.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err: any) {
+      setPosts(previous);
+      feedback.error("Не удалось удалить хук", err);
+    }
+  };
 
+  // Переименование хука
+  const handleUpdateHookLabel = async (hookId: string, label: string) => {
+    if (!selectedPost) return;
+    try {
+      const updated = await ApiClient.updateHook(selectedPost.id, hookId, { label });
+      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err: any) {
+      console.error("Update hook label error:", err);
+    }
+  };
+
+  // Изменение текста хука
+  const handleHookChange = (newHookText: string) => {
+    if (!selectedPost || !activeHook) return;
+
+    const updatedHooks = hooks.map((h) =>
+      h.id === activeHook.id
+        ? { ...h, text: newHookText, charCount: [...newHookText].length }
+        : h
+    );
+
+    const updatedPost: PostDto = {
+      ...selectedPost,
+      hooks: updatedHooks,
+      activeHook: { ...activeHook, text: newHookText, charCount: [...newHookText].length }
+    };
     setPosts(posts.map((p) => (p.id === selectedPost.id ? updatedPost : p)));
 
     const postId = selectedPost.id;
-    const variantId = activeVariant.id;
+    const hookId = activeHook.id;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      ApiClient.updatePost(postId, {
-        variantId,
-        hook: newHook,
-        body: newBody
-      }).catch((err: any) => {
-        console.error("Save error:", err);
+      ApiClient.updateHook(postId, hookId, { text: newHookText }).catch((err) => {
+        console.error("Save hook error:", err);
+      });
+    }, 400);
+  };
+
+  // Закрепление тела за хуком
+  const handlePinBody = async (bodyId: string | null) => {
+    if (!selectedPost || !activeHook) return;
+
+    const nextHooks = hooks.map((h) =>
+      h.id === activeHook.id ? { ...h, pinnedBodyId: bodyId } : h
+    );
+    const updatedPost: PostDto = {
+      ...selectedPost,
+      hooks: nextHooks,
+      activeHook: { ...activeHook, pinnedBodyId: bodyId }
+    };
+    setPosts(posts.map((p) => (p.id === selectedPost.id ? updatedPost : p)));
+
+    try {
+      const updated = await ApiClient.pinBodyToHook(selectedPost.id, activeHook.id, bodyId);
+      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+      feedback.toast(
+        "success",
+        bodyId ? "Тело поста закреплено за данным хуком 📌" : "Закрепление тела снято"
+      );
+    } catch (err: any) {
+      feedback.error("Не удалось изменить закрепление тела", err);
+    }
+  };
+
+  // Выбор тела поста
+  const handleSelectBody = async (bodyId: string) => {
+    if (!selectedPost) return;
+
+    const updatedPost: PostDto = {
+      ...selectedPost,
+      activeBodyId: bodyId
+    };
+    setPosts(posts.map((p) => (p.id === selectedPost.id ? updatedPost : p)));
+
+    try {
+      const updated = await ApiClient.selectBody(selectedPost.id, bodyId);
+      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err: any) {
+      console.error("Select body error:", err);
+    }
+  };
+
+  // Добавление тела поста
+  const handleAddBody = async (label?: string, text?: string) => {
+    if (!selectedPost) return;
+    try {
+      const updated = await ApiClient.addBody(selectedPost.id, {
+        label: label || `Тело ${bodies.length + 1}`,
+        text: text || ""
+      });
+      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err: any) {
+      feedback.error("Не удалось добавить тело поста", err);
+    }
+  };
+
+  // Удаление тела поста
+  const handleDeleteBody = async (bodyId: string) => {
+    if (!selectedPost || bodies.length <= 1) return;
+    const targetBody = bodies.find((b) => b.id === bodyId);
+    const ok = await feedback.confirm({
+      title: "Удалить тело поста?",
+      message: targetBody?.label
+        ? `Тело «${targetBody.label}» будет удалено без восстановления.`
+        : "Тело поста будет удалено без восстановления.",
+      confirmLabel: "Удалить"
+    });
+    if (!ok) return;
+
+    const previous = posts;
+    const nextBodies = bodies.filter((b) => b.id !== bodyId);
+    const nextActiveBody = nextBodies.find((b) => b.id === selectedPost.activeBodyId) || nextBodies[0];
+    setPosts(
+      posts.map((p) =>
+        p.id === selectedPost.id
+          ? {
+              ...p,
+              bodies: nextBodies,
+              activeBodyId: nextActiveBody.id,
+              activeBody: nextActiveBody
+            }
+          : p
+      )
+    );
+
+    try {
+      const updated = await ApiClient.deleteBody(selectedPost.id, bodyId);
+      setPosts((current) => current.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err: any) {
+      setPosts(previous);
+      feedback.error("Не удалось удалить тело", err);
+    }
+  };
+
+  // Переименование тела поста
+  const handleUpdateBodyLabel = async (bodyId: string, label: string) => {
+    if (!selectedPost) return;
+    try {
+      const updated = await ApiClient.updateBody(selectedPost.id, bodyId, { label });
+      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err: any) {
+      console.error("Update body label error:", err);
+    }
+  };
+
+  // Изменение текста тела поста
+  const handleBodyChange = (newBodyText: string) => {
+    if (!selectedPost || !activeBody) return;
+
+    const updatedBodies = bodies.map((b) =>
+      b.id === activeBody.id
+        ? { ...b, text: newBodyText, charCount: [...newBodyText].length }
+        : b
+    );
+
+    const updatedPost: PostDto = {
+      ...selectedPost,
+      bodies: updatedBodies,
+      activeBody: { ...activeBody, text: newBodyText, charCount: [...newBodyText].length }
+    };
+    setPosts(posts.map((p) => (p.id === selectedPost.id ? updatedPost : p)));
+
+    const postId = selectedPost.id;
+    const bodyId = activeBody.id;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      ApiClient.updateBody(postId, bodyId, { text: newBodyText }).catch((err) => {
+        console.error("Save body error:", err);
       });
     }, 400);
   };
@@ -285,61 +568,6 @@ export const App: React.FC = () => {
       setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
     } catch (err: any) {
       feedback.error("Не удалось сменить статус", err);
-    }
-  };
-
-  // Добавление нового варианта хука
-  const handleAddVariant = async (label?: string) => {
-    if (!selectedPost) return;
-    try {
-      const updated = await ApiClient.addVariant(selectedPost.id, {
-        label: label || `Вариант ${selectedPost.variants.length + 1}`
-      });
-      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
-    } catch (err: any) {
-      feedback.error("Не удалось добавить вариант", err);
-    }
-  };
-
-  // Выбор активного варианта
-  const handleSelectVariant = async (variantId: string) => {
-    if (!selectedPost) return;
-    try {
-      const updated = await ApiClient.selectVariant(selectedPost.id, variantId);
-      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
-    } catch (err: any) {
-      console.error("Select variant error:", err);
-    }
-  };
-
-  // Удаление варианта
-  const handleDeleteVariant = async (variantId: string) => {
-    if (!selectedPost || selectedPost.variants.length <= 1) return;
-    const variant = selectedPost.variants.find((v) => v.id === variantId);
-    const ok = await feedback.confirm({
-      title: "Удалить вариант?",
-      message: variant?.label
-        ? `Вариант «${variant.label}» будет удалён без восстановления.`
-        : "Вариант будет удалён без восстановления.",
-      confirmLabel: "Удалить"
-    });
-    if (!ok) return;
-    const previous = posts;
-    const nextVariants = selectedPost.variants.filter((v) => v.id !== variantId);
-    const nextActive = nextVariants.find((v) => v.id === selectedPost.activeVariantId) || nextVariants[0];
-    setPosts(
-      posts.map((p) =>
-        p.id === selectedPost.id
-          ? { ...p, variants: nextVariants, activeVariantId: nextActive.id, activeVariant: nextActive }
-          : p
-      )
-    );
-    try {
-      const updated = await ApiClient.deleteVariant(selectedPost.id, variantId);
-      setPosts((current) => current.map((p) => (p.id === updated.id ? updated : p)));
-    } catch (err: any) {
-      setPosts(previous);
-      feedback.error("Не удалось удалить вариант", err);
     }
   };
 
@@ -359,11 +587,12 @@ export const App: React.FC = () => {
 
   // Вставка шаблона из методик
   const handleInsertTemplate = (template: string) => {
-    if (!selectedPost || !activeVariant) return;
+    if (!selectedPost) return;
     const lines = template.split("\n\n");
     const hook = lines[0] || "";
     const body = lines.slice(1).join("\n\n");
-    handleContentChange(hook, body);
+    if (hook) handleHookChange(hook);
+    if (body) handleBodyChange(body);
   };
 
   // Отметка как опубликованный
@@ -382,19 +611,19 @@ export const App: React.FC = () => {
   };
 
   const wrapBody = (before: string, after: string) => {
-    if (!selectedPost || !activeVariant) return;
+    if (!selectedPost || !activeBody) return;
     const el = bodyRef.current;
-    const value = activeVariant.body;
+    const value = activeBody.text;
     const start = el?.selectionStart ?? value.length;
     const end = el?.selectionEnd ?? value.length;
     const selected = value.slice(start, end) || (after ? "текст" : "");
-    handleContentChange(activeVariant.hook, value.slice(0, start) + before + selected + after + value.slice(end));
+    handleBodyChange(value.slice(0, start) + before + selected + after + value.slice(end));
   };
 
   const applyBodyList = () => {
-    if (!selectedPost || !activeVariant) return;
+    if (!selectedPost || !activeBody) return;
     const el = bodyRef.current;
-    const value = activeVariant.body;
+    const value = activeBody.text;
     const start = el?.selectionStart ?? 0;
     const end = el?.selectionEnd ?? value.length;
     const block = (start === end ? value : value.slice(start, end)) || value;
@@ -403,7 +632,7 @@ export const App: React.FC = () => {
       .map((line) => (line.startsWith("- ") || !line.trim() ? line : `- ${line}`))
       .join("\n");
     const next = start === end ? listed : value.slice(0, start) + listed + value.slice(end);
-    handleContentChange(activeVariant.hook, next);
+    handleBodyChange(next);
   };
 
   const statusFilters = [
@@ -598,7 +827,7 @@ export const App: React.FC = () => {
           </div>
         </aside>
 
-        {selectedPost && activeVariant ? (
+        {selectedPost && activeHook && activeBody ? (
           <main className="flex-1 flex flex-col min-w-0 bg-surface-950 overflow-y-auto">
             <div className="px-6 py-3 border-b border-surface-800 bg-surface-900/40 flex flex-wrap items-center justify-between gap-4 shrink-0">
               <div className="flex items-center space-x-3">
@@ -613,7 +842,7 @@ export const App: React.FC = () => {
               <div className="flex items-center space-x-2 bg-surface-900 px-3 py-1 rounded-lg border border-surface-800">
                 <span className="text-xs text-slate-400">Лимит символов:</span>
                 <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-bold text-slate-200">{activeVariant.charCount}</span>
+                  <span className="text-xs font-bold text-slate-200">{totalChars}</span>
                   <span className="text-xs text-slate-500">/ 280</span>
                   <svg className="w-4 h-4 -rotate-90 text-brand-500" viewBox="0 0 36 36">
                     <path
@@ -625,16 +854,16 @@ export const App: React.FC = () => {
                     />
                     <path
                       className={
-                        activeVariant.isOverLimit
+                        isOverLimit
                           ? "text-rose-500"
-                          : activeVariant.remainingChars <= 20
+                          : remainingChars <= 20
                             ? "text-amber-400"
                             : "text-brand-500"
                       }
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                       fill="none"
                       stroke="currentColor"
-                      strokeDasharray={`${Math.min(100, (activeVariant.charCount / 280) * 100)}, 100`}
+                      strokeDasharray={`${Math.min(100, (totalChars / 280) * 100)}, 100`}
                       strokeLinecap="round"
                       strokeWidth="3.5"
                     />
@@ -645,29 +874,35 @@ export const App: React.FC = () => {
 
             <div className="p-6 max-w-4xl w-full mx-auto space-y-6">
 
-              {/* Hook Variants Tabs */}
-              <VariantTabs
-                variants={selectedPost.variants}
-                activeVariantId={activeVariant.id}
-                onSelectVariant={handleSelectVariant}
-                onAddVariant={handleAddVariant}
-                onDeleteVariant={handleDeleteVariant}
-                onUpdateLabel={async (variantId, label) => {
-                  await ApiClient.updatePost(selectedPost.id, { variantId, variantLabel: label });
-                  loadPosts();
-                }}
+              {/* 1. Блок Хуков поста */}
+              <ContentTabs
+                items={hooks.map((h) => ({
+                  id: h.id,
+                  label: h.label,
+                  charCount: h.charCount,
+                  isPinned: Boolean(h.pinnedBodyId)
+                }))}
+                activeId={activeHook.id}
+                onSelect={handleSelectHook}
+                onAdd={() => handleAddHook()}
+                onDelete={handleDeleteHook}
+                onUpdateLabel={handleUpdateHookLabel}
+                title="Хуки поста"
+                iconType="hook"
+                addButtonText="Новый хук"
+                theme="purple"
               />
 
-              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-purple-500/80 transition-all">
                 <div className="flex items-center justify-between mb-2 gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-brand-400">
+                  <label className="text-xs font-bold uppercase tracking-wider text-purple-400">
                     1. Хук (первая строчка твита):
                   </label>
                   <button
                     type="button"
                     title="Копировать хук"
-                    onClick={() => copyField("hook", activeVariant.hook)}
-                    className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-brand-300 hover:border-brand-500/40 hover:bg-brand-500/10 transition-colors shrink-0"
+                    onClick={() => copyField("hook", activeHook.text)}
+                    className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-purple-300 hover:border-purple-500/40 hover:bg-purple-500/10 transition-colors shrink-0"
                   >
                     {copiedField === "hook" ? (
                       <Check className="size-3 text-emerald-400" strokeWidth={2.5} />
@@ -678,10 +913,10 @@ export const App: React.FC = () => {
                 </div>
                 <textarea
                   rows={2}
-                  value={activeVariant.hook}
-                  onChange={(e) => handleContentChange(e.target.value, activeVariant.body)}
+                  value={activeHook.text}
+                  onChange={(e) => handleHookChange(e.target.value)}
                   placeholder="Напишите провокационный хук, вопрос или интригующий факт..."
-                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y"
+                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors resize-y"
                 />
                 <div className="mt-1.5 flex items-start justify-between gap-3">
                   <p className="text-[11px] text-slate-500 min-w-0">
@@ -693,21 +928,75 @@ export const App: React.FC = () => {
                     Совет: хук должен заставить нажать «Показать ещё» или открыть тред.
                   </p>
                   <span className="text-[11px] font-mono text-slate-400 shrink-0 pt-px">
-                    {[...activeVariant.hook].length} знака
+                    {[...activeHook.text].length} знака
                   </span>
                 </div>
               </div>
 
-              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+              {/* 2. Блок Тел поста */}
+              <ContentTabs
+                items={bodies.map((b) => ({
+                  id: b.id,
+                  label: b.label,
+                  charCount: b.charCount,
+                  isPinned: activeHook?.pinnedBodyId === b.id
+                }))}
+                activeId={activeBody.id}
+                onSelect={handleSelectBody}
+                onAdd={() => handleAddBody()}
+                onDelete={handleDeleteBody}
+                onUpdateLabel={handleUpdateBodyLabel}
+                title="Тела поста"
+                iconType="body"
+                addButtonText="Новое тело"
+                theme="emerald"
+              />
+
+              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-emerald-500/80 transition-all">
                 <div className="flex items-center justify-between mb-2 gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    2. Тело поста (раскрытие мысли или тред):
-                  </label>
+                  <div className="flex items-center space-x-3">
+                    <label className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                      2. Тело поста (раскрытие мысли или тред):
+                    </label>
+                    {activeHook && activeBody && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handlePinBody(
+                            activeHook.pinnedBodyId === activeBody.id ? null : activeBody.id
+                          )
+                        }
+                        title={
+                          activeHook.pinnedBodyId === activeBody.id
+                            ? "Тело закреплено за этим хуком. Нажмите, чтобы отвязать."
+                            : "Закрепить это тело за текущим хуком по умолчанию."
+                        }
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium border transition-all ${
+                          activeHook.pinnedBodyId === activeBody.id
+                            ? "bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm"
+                            : "bg-surface-950/60 border-surface-750 text-slate-400 hover:text-slate-200 hover:border-surface-600"
+                        }`}
+                      >
+                        <Pin
+                          className={`size-3 rotate-45 ${
+                            activeHook.pinnedBodyId === activeBody.id
+                              ? "fill-amber-300 text-amber-300"
+                              : ""
+                          }`}
+                        />
+                        <span>
+                          {activeHook.pinnedBodyId === activeBody.id
+                            ? "Закреплено за хуком 📌"
+                            : "Закрепить за хуком"}
+                        </span>
+                      </button>
+                    )}
+                  </div>
                   <button
                     type="button"
                     title="Копировать тело"
-                    onClick={() => copyField("body", activeVariant.body)}
-                    className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-brand-300 hover:border-brand-500/40 hover:bg-brand-500/10 transition-colors shrink-0"
+                    onClick={() => copyField("body", activeBody.text)}
+                    className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-emerald-300 hover:border-emerald-500/40 hover:bg-emerald-500/10 transition-colors shrink-0"
                   >
                     {copiedField === "body" ? (
                       <Check className="size-3 text-emerald-400" strokeWidth={2.5} />
@@ -719,10 +1008,10 @@ export const App: React.FC = () => {
                 <textarea
                   ref={bodyRef}
                   rows={5}
-                  value={activeVariant.body}
-                  onChange={(e) => handleContentChange(activeVariant.hook, e.target.value)}
+                  value={activeBody.text}
+                  onChange={(e) => handleBodyChange(e.target.value)}
                   placeholder="Основная ценность, выводы, список пунктов или призыв к действию..."
-                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y leading-relaxed"
+                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors resize-y leading-relaxed"
                 />
                 <div className="flex items-center justify-between pt-3 mt-2 border-t border-surface-800/80 text-xs text-slate-400">
                   <div className="flex items-center space-x-2">
@@ -762,20 +1051,20 @@ export const App: React.FC = () => {
                     </button>
                   </div>
                   <span className="text-[11px] font-mono text-slate-400 shrink-0">
-                    {[...activeVariant.body].length} знака
+                    {[...activeBody.text].length} знака
                   </span>
                 </div>
               </div>
 
               <MediaGallery
-                key={`${selectedPost.id}:${activeVariant.id}`}
+                key={`${selectedPost.id}:${activeHook.id}`}
                 postId={selectedPost.id}
-                variantId={activeVariant.id}
+                variantId={activeHook.id}
                 onPreviewChange={handlePreviewMedia}
               />
 
               <TwitterPreview
-                variant={activeVariant}
+                variant={previewVariant}
                 userName={userProfile.name}
                 userHandle={userProfile.handle}
                 avatarUrl={userProfile.avatarUrl}
@@ -827,22 +1116,25 @@ export const App: React.FC = () => {
         )}
 
         {/* Right Column: AI Copilot Assistant */}
-        {selectedPost && activeVariant && (
+        {selectedPost && activeHook && activeBody && (
           <div className="w-80 border-l border-[#162032] bg-[#0c111c]/60 flex flex-col shrink-0 min-h-0 h-full">
             <AiCopilotPanel
-              currentText={activeVariant.fullText}
+              currentText={previewVariant.fullText}
               onApplyText={(text) => {
                 const parts = text.split("\n\n");
-                handleContentChange(parts[0] || "", parts.slice(1).join("\n\n"));
+                handleHookChange(parts[0] || "");
+                handleBodyChange(parts.slice(1).join("\n\n"));
               }}
-              onApplyHook={(hook) => handleContentChange(hook, activeVariant.body)}
+              onApplyHook={(hook) => handleHookChange(hook)}
+              onAddHook={async (hook) => {
+                await handleAddHook(`AI Хук ${hooks.length + 1}`, hook);
+              }}
+              onApplyBody={(body) => handleBodyChange(body)}
+              onAddBody={async (body) => {
+                await handleAddBody(`AI Тело ${bodies.length + 1}`, body);
+              }}
               onAddAsVariant={async (hook) => {
-                await ApiClient.addVariant(selectedPost.id, {
-                  hook,
-                  body: activeVariant.body,
-                  label: `AI Хук ${selectedPost.variants.length + 1}`
-                });
-                loadPosts();
+                await handleAddHook(`AI Хук ${hooks.length + 1}`, hook);
               }}
             />
           </div>

@@ -6,8 +6,13 @@ import { PostMetrics } from "../../domain/entities/Post.ts";
 export interface UpdatePostContentRequest {
   postId: string;
   variantId?: string;
+  hookId?: string;
   hook?: string;
+  hookLabel?: string;
+  bodyId?: string;
   body?: string;
+  bodyLabel?: string;
+  pinnedBodyId?: string | null;
   variantLabel?: string;
   tags?: string[];
   notes?: string;
@@ -24,31 +29,36 @@ export class UpdatePostContentUseCase {
       return Result.fail(`Пост с ID ${req.postId} не найден`);
     }
 
-    let targetVariant = req.variantId
-      ? post.variants.find((v) => v.id === req.variantId)
-      : post.getActiveVariant();
+    const targetHookId = req.hookId || req.variantId || post.activeHookId;
+    const targetHookLabel = req.hookLabel || req.variantLabel;
 
-    if (!targetVariant && req.variantId) {
-      targetVariant = post.ensureVariant(req.variantId, req.hook ?? "", req.body ?? "");
+    if (req.hook !== undefined) {
+      const hookRes = post.updateHook(targetHookId, req.hook, targetHookLabel);
+      if (hookRes.isFailure) {
+        post.addHook(req.hook, targetHookLabel, req.pinnedBodyId);
+      }
+    } else if (targetHookLabel !== undefined) {
+      const currentHook = post.hooks.find((h) => h.id === targetHookId);
+      if (currentHook) {
+        post.updateHook(targetHookId, currentHook.text, targetHookLabel);
+      }
     }
 
-    if (!targetVariant) {
-      targetVariant = post.ensureVariant(
-        post.activeVariantId || crypto.randomUUID(),
-        req.hook ?? "",
-        req.body ?? ""
-      );
+    if (req.pinnedBodyId !== undefined) {
+      post.pinBodyToHook(targetHookId, req.pinnedBodyId);
     }
 
-    if (req.hook !== undefined || req.body !== undefined) {
-      targetVariant.updateContent(
-        req.hook !== undefined ? req.hook : targetVariant.hook,
-        req.body !== undefined ? req.body : targetVariant.body
-      );
-    }
-
-    if (req.variantLabel !== undefined) {
-      targetVariant.updateLabel(req.variantLabel);
+    const targetBodyId = req.bodyId || post.activeBodyId;
+    if (req.body !== undefined) {
+      const bodyRes = post.updateBody(targetBodyId, req.body, req.bodyLabel);
+      if (bodyRes.isFailure) {
+        post.addBody(req.body, req.bodyLabel);
+      }
+    } else if (req.bodyLabel !== undefined) {
+      const currentBody = post.bodies.find((b) => b.id === targetBodyId);
+      if (currentBody) {
+        post.updateBody(targetBodyId, currentBody.text, req.bodyLabel);
+      }
     }
 
     if (req.tags !== undefined) {
