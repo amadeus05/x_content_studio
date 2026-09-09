@@ -84,8 +84,11 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
     onSelectVariant(id);
   };
 
+  const chipClass =
+    "box-border flex items-center gap-1.5 h-7 px-3 rounded-md text-xs shrink-0 border";
+
   return (
-    <div className="flex items-center justify-between bg-surface-900/70 p-2 rounded-xl border border-surface-800 gap-3">
+    <div className="box-border flex h-[51px] items-center justify-between overflow-hidden bg-surface-900/70 p-2 rounded-xl border border-surface-800 gap-3">
       <div className="flex items-center space-x-2 min-w-0 flex-1">
         <span className="text-xs font-bold uppercase tracking-wider text-ai-400 flex items-center space-x-1.5 px-2 shrink-0">
           <Zap className="w-3.5 h-3.5" />
@@ -106,7 +109,7 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
               skipClick: false
             };
           }}
-          className={`flex items-center space-x-1 min-w-0 flex-1 bg-surface-950 p-1 rounded-lg border border-surface-800 overflow-x-auto touch-pan-x select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          className={`flex items-center gap-1 min-w-0 flex-1 h-[35px] bg-surface-950 p-1 rounded-lg border border-surface-800 overflow-x-auto overflow-y-hidden touch-pan-x select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden box-border ${
             dragging ? "cursor-grabbing" : "cursor-grab"
           }`}
         >
@@ -115,7 +118,7 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
 
             if (editingId === v.id) {
               return (
-                <div key={v.id} className="flex items-center gap-1 px-3 py-1 rounded-md bg-surface-850 border border-surface-750 shrink-0">
+                <div key={v.id} className={`${chipClass} bg-surface-850 border-surface-750`}>
                   <input
                     type="text"
                     value={labelInput}
@@ -126,7 +129,7 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
                     }}
                     onFocus={(e) => e.currentTarget.select()}
                     autoFocus
-                    className="bg-transparent text-xs text-white outline-none w-24 select-text leading-none"
+                    className="bg-transparent text-xs text-white outline-none border-0 p-0 m-0 w-24 h-4 leading-4 select-text shadow-none"
                   />
                   <button
                     type="button"
@@ -161,10 +164,10 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
                     selectVariant(v.id);
                   }
                 }}
-                className={`group flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs shrink-0 cursor-pointer ${
+                className={`group ${chipClass} cursor-pointer ${
                   isActive
-                    ? "font-semibold bg-brand-500 text-white shadow-sm"
-                    : "font-medium text-slate-400 hover:text-slate-200 hover:bg-surface-850"
+                    ? "font-semibold bg-brand-500 text-white border-transparent shadow-sm"
+                    : "font-medium text-slate-400 border-transparent hover:text-slate-200 hover:bg-surface-850"
                 }`}
               >
                 <span>{v.variantLabel}</span>

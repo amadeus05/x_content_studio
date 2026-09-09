@@ -55,7 +55,7 @@ export const StudioSelect: React.FC<StudioSelectProps> = ({
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((v) => !v)}
-        className={`relative flex items-center bg-surface-850 hover:bg-surface-800 border rounded-lg pl-2.5 pr-8 py-1.5 text-xs font-semibold text-left transition-colors ${
+        className={`relative flex items-center h-8 bg-surface-850 hover:bg-surface-800 border rounded-lg pl-2.5 pr-8 text-xs font-semibold text-left transition-colors ${
           fullWidth ? "w-full" : ""
         } ${
           open ? "border-brand-500" : "border-surface-750 focus:border-brand-500"

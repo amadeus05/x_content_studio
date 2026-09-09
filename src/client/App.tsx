@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Plus,
-  Search,
-  Settings,
   ExternalLink,
   Info,
   Check
@@ -13,16 +11,16 @@ import { PostDto } from "../modules/content/application/dtos/PostDto.ts";
 import { MethodologyDto, ToneProfileDto } from "../modules/playbook/application/use-cases/GetPlaybookUseCase.ts";
 import { TwitterPreview } from "./components/TwitterPreview.tsx";
 import { VariantTabs } from "./components/VariantTabs.tsx";
-import { PlaybookModal } from "./components/PlaybookModal.tsx";
+import { PlaybookPage } from "./components/PlaybookPage.tsx";
 import { AiCopilotPanel } from "./components/AiCopilotPanel.tsx";
-import { PostCard } from "./components/PostCard.tsx";
 import { SettingsModal } from "./components/SettingsModal.tsx";
 import { TagEditor } from "./components/TagEditor.tsx";
-import { TagFilter } from "./components/TagFilter.tsx";
 import { StudioSelect } from "./components/StudioSelect.tsx";
 import { MediaGallery, PreviewMedia } from "./components/MediaGallery.tsx";
 import { useFeedback } from "./components/Feedback.tsx";
 import { LoginPage } from "./components/LoginPage.tsx";
+import { NavRail, AppView } from "./components/NavRail.tsx";
+import { PostsPage } from "./components/PostsPage.tsx";
 
 /** Copy glyph с ровным центром в viewBox (у Lucide Copy оптика уезжает влево-вверх). */
 const CopyGlyph: React.FC<{ className?: string }> = ({ className }) => (
@@ -49,6 +47,7 @@ export const App: React.FC = () => {
   const [authBootError, setAuthBootError] = useState("");
   const [posts, setPosts] = useState<PostDto[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [view, setView] = useState<AppView>("posts");
   const [activeFilterStatus, setActiveFilterStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -64,7 +63,6 @@ export const App: React.FC = () => {
     avoidWords: [],
     targetAudience: ""
   });
-  const [isPlaybookOpen, setIsPlaybookOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
@@ -116,9 +114,6 @@ export const App: React.FC = () => {
           ? data.filter((p) => selectedTags.every((tag) => p.tags.includes(tag)))
           : data;
       setPosts(visible);
-      if (visible.length > 0 && !selectedPostId) {
-        setSelectedPostId(visible[0].id);
-      }
     } catch (err: any) {
       console.error("Error loading posts:", err);
     } finally {
@@ -173,16 +168,21 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!authenticated) return;
     loadPosts();
+  }, [activeFilterStatus, selectedTags, searchQuery, authenticated]);
+
+  useEffect(() => {
+    if (!authenticated) return;
     loadPlaybook();
     loadTags();
-  }, [activeFilterStatus, selectedTags, authenticated]);
+  }, [authenticated]);
 
-  // Хоткей для создания поста (N) и поиска (Cmd+K)
+  // Хоткей поиска (Cmd+K) — фокус на странице постов
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        document.getElementById("search-input")?.focus();
+        setView("posts");
+        requestAnimationFrame(() => document.getElementById("search-input")?.focus());
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -195,7 +195,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const selectedPost = posts.find((p) => p.id === selectedPostId) || posts[0];
+  const selectedPost = posts.find((p) => p.id === selectedPostId) || null;
   const activeVariant = selectedPost?.activeVariant;
 
   // Создание нового черновика
@@ -211,6 +211,7 @@ export const App: React.FC = () => {
       }
       setPosts([newPost, ...posts.filter((p) => p.id !== newPost.id)]);
       setSelectedPostId(newPost.id);
+      setView("editor");
     } catch (err: any) {
       feedback.error("Не удалось создать черновик", err);
     }
@@ -231,6 +232,7 @@ export const App: React.FC = () => {
       setPosts(updated);
       if (selectedPostId === id) {
         setSelectedPostId(updated.length > 0 ? updated[0].id : null);
+        if (updated.length === 0) setView("posts");
       }
     } catch (err: any) {
       feedback.error("Не удалось удалить черновик", err);
@@ -359,11 +361,16 @@ export const App: React.FC = () => {
 
   // Вставка шаблона из методик
   const handleInsertTemplate = (template: string) => {
-    if (!selectedPost || !activeVariant) return;
+    if (!selectedPost || !activeVariant) {
+      void navigator.clipboard.writeText(template);
+      feedback.toast("info", "Шаблон скопирован — откройте пост, чтобы вставить");
+      return;
+    }
     const lines = template.split("\n\n");
     const hook = lines[0] || "";
     const body = lines.slice(1).join("\n\n");
     handleContentChange(hook, body);
+    setView("editor");
   };
 
   // Отметка как опубликованный
@@ -456,419 +463,349 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface-950">
-      {/* Top Navbar */}
       <header className="h-14 border-b border-surface-800 bg-surface-900/90 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0 select-none">
-        <div className="flex items-center">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-base">
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-white tracking-tight text-sm">X Content Studio</span>
-              <span className="inline-flex items-center justify-center h-5 px-1.5 rounded text-[10px] font-bold uppercase tracking-wider leading-none bg-brand-500/10 text-brand-400 border border-brand-500/30">
-                <span className="translate-y-[1px]">PRO</span>
-              </span>
-            </div>
+        <div className="flex items-center space-x-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-base">
+            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
           </div>
-
-          <div className="relative w-72 hidden md:block ml-[6.75rem]">
-            <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
-              <Search className="w-4 h-4" />
+          <div className="flex items-center space-x-2">
+            <span className="font-bold text-white tracking-tight text-sm">X Content Studio</span>
+            <span className="inline-flex items-center justify-center h-5 px-1.5 rounded text-[10px] font-bold uppercase tracking-wider leading-none bg-brand-500/10 text-brand-400 border border-brand-500/30">
+              <span className="translate-y-[1px]">PRO</span>
             </span>
-            <input
-              id="search-input"
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                loadPosts();
-              }}
-              placeholder="Полнотекстовый поиск... (Ctrl+K)"
-              className="w-full pl-9 pr-12 py-1.5 text-xs bg-surface-950/80 border border-surface-750/70 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
-            />
-            <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-              <kbd className="px-1.5 py-0.5 text-[10px] font-medium text-slate-400 bg-surface-800 border border-surface-700 rounded">
-                ⌘K
-              </kbd>
-            </div>
           </div>
         </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            type="button"
-            onClick={() => setIsPlaybookOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-surface-850 hover:bg-surface-800 border border-surface-750 transition-colors"
-          >
-            <svg
-              className="w-3.5 h-3.5 text-brand-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
-            <span>Методики & ToV</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-surface-850 border border-transparent hover:border-surface-750 transition-colors"
-            title="Настройки студии"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-
-          <div className="h-4 w-px bg-surface-800" />
-
-          <button
-            type="button"
-            onClick={handleCreatePost}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600 shadow-md shadow-brand-500/25 transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
-            <span>Новый черновик</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            title={userProfile.name}
-            className="w-7 h-7 rounded-full bg-gradient-to-tr from-brand-500 to-ai-500 p-[1px] cursor-pointer shrink-0"
-          >
-            <div className="w-full h-full rounded-full bg-surface-900 flex items-center justify-center font-bold text-[11px] text-white overflow-hidden">
-              {userProfile.avatarUrl ? (
-                <img src={userProfile.avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                profileInitials
-              )}
-            </div>
-          </button>
+        <div className="text-[11px] text-slate-500">
+          {view === "posts" && "Библиотека постов"}
+          {view === "playbook" && "Методики и Tone of Voice"}
+          {view === "editor" && "Редактор поста"}
         </div>
       </header>
 
-      {/* Main Workspace (3 columns) */}
-      <div className="flex flex-1 overflow-hidden">
-        <aside className="w-80 border-r border-surface-800 bg-surface-900/60 flex flex-col shrink-0">
-          <div className="p-3 border-b border-surface-800/80 space-y-2">
-            <StudioSelect
-              aria-label="Фильтр по статусу"
-              fullWidth
-              value={activeFilterStatus}
-              options={statusFilters}
-              onChange={setActiveFilterStatus}
-            />
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        <NavRail
+          view={view}
+          onNavigate={setView}
+          onCreateDraft={handleCreatePost}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onLogout={() => setAuthenticated(false)}
+          userProfile={userProfile}
+          profileInitials={profileInitials}
+        />
 
-            <TagFilter tags={tags} selected={selectedTags} onChange={setSelectedTags} />
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-            {posts.length === 0 ? (
-              <div className="text-center py-12 text-slate-500 text-xs">
-                {loading ? "Загрузка черновиков..." : "Нет постов в этом разделе. Нажмите «Новый черновик»."}
-              </div>
-            ) : (
-              posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  isSelected={post.id === selectedPostId}
-                  onSelect={() => setSelectedPostId(post.id)}
-                  onDelete={(e) => handleDeletePost(post.id, e)}
-                />
-              ))
-            )}
-          </div>
-
-          <div className="p-2.5 border-t border-surface-800 bg-surface-950/60 flex items-center justify-between text-[11px] text-slate-500">
-            <span className="flex items-center space-x-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Синхронизировано с X</span>
-            </span>
-            <span className="font-mono text-[10px]">v1.0</span>
-          </div>
-        </aside>
-
-        {selectedPost && activeVariant ? (
-          <main className="flex-1 flex flex-col min-w-0 bg-surface-950 overflow-y-auto">
-            <div className="px-6 py-3 border-b border-surface-800 bg-surface-900/40 flex flex-wrap items-center justify-between gap-4 shrink-0">
-              <div className="flex items-center space-x-3">
-                <StudioSelect
-                  aria-label="Статус поста"
-                  value={selectedPost.status}
-                  options={postStatusOptions}
-                  onChange={handleStatusChange}
-                />
-                <TagEditor tags={selectedPost.tags} onChangeTags={handleTagsChange} />
-              </div>
-              <div className="flex items-center space-x-2 bg-surface-900 px-3 py-1 rounded-lg border border-surface-800">
-                <span className="text-xs text-slate-400">Лимит символов:</span>
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-bold text-slate-200">{activeVariant.charCount}</span>
-                  <span className="text-xs text-slate-500">/ 280</span>
-                  <svg className="w-4 h-4 -rotate-90 text-brand-500" viewBox="0 0 36 36">
-                    <path
-                      className="text-surface-800"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3.5"
-                    />
-                    <path
-                      className={
-                        activeVariant.isOverLimit
-                          ? "text-rose-500"
-                          : activeVariant.remainingChars <= 20
-                            ? "text-amber-400"
-                            : "text-brand-500"
-                      }
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeDasharray={`${Math.min(100, (activeVariant.charCount / 280) * 100)}, 100`}
-                      strokeLinecap="round"
-                      strokeWidth="3.5"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 max-w-4xl w-full mx-auto space-y-6">
-
-              {/* Hook Variants Tabs */}
-              <VariantTabs
-                variants={selectedPost.variants}
-                activeVariantId={activeVariant.id}
-                onSelectVariant={handleSelectVariant}
-                onAddVariant={handleAddVariant}
-                onDeleteVariant={handleDeleteVariant}
-                onUpdateLabel={async (variantId, label) => {
-                  await ApiClient.updatePost(selectedPost.id, { variantId, variantLabel: label });
-                  loadPosts();
-                }}
-              />
-
-              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
-                <div className="flex items-center justify-between mb-2 gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-brand-400">
-                    1. Хук (первая строчка твита):
-                  </label>
-                  <button
-                    type="button"
-                    title="Копировать хук"
-                    onClick={() => copyField("hook", activeVariant.hook)}
-                    className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-brand-300 hover:border-brand-500/40 hover:bg-brand-500/10 transition-colors shrink-0"
-                  >
-                    {copiedField === "hook" ? (
-                      <Check className="size-3 text-emerald-400" strokeWidth={2.5} />
-                    ) : (
-                      <CopyGlyph className="size-3.5" />
-                    )}
-                  </button>
-                </div>
-                <textarea
-                  rows={2}
-                  value={activeVariant.hook}
-                  onChange={(e) => handleContentChange(e.target.value, activeVariant.body)}
-                  placeholder="Напишите провокационный хук, вопрос или интригующий факт..."
-                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y"
-                />
-                <div className="mt-1.5 flex items-start justify-between gap-3">
-                  <p className="text-[11px] text-slate-500 min-w-0">
-                    <Info
-                      className="mr-1.5 inline-block size-[13px] align-[-2px] text-amber-400"
-                      strokeWidth={2}
-                      aria-hidden
-                    />
-                    Совет: хук должен заставить нажать «Показать ещё» или открыть тред.
-                  </p>
-                  <span className="text-[11px] font-mono text-slate-400 shrink-0 pt-px">
-                    {[...activeVariant.hook].length} знака
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
-                <div className="flex items-center justify-between mb-2 gap-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    2. Тело поста (раскрытие мысли или тред):
-                  </label>
-                  <button
-                    type="button"
-                    title="Копировать тело"
-                    onClick={() => copyField("body", activeVariant.body)}
-                    className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-brand-300 hover:border-brand-500/40 hover:bg-brand-500/10 transition-colors shrink-0"
-                  >
-                    {copiedField === "body" ? (
-                      <Check className="size-3 text-emerald-400" strokeWidth={2.5} />
-                    ) : (
-                      <CopyGlyph className="size-3.5" />
-                    )}
-                  </button>
-                </div>
-                <textarea
-                  ref={bodyRef}
-                  rows={5}
-                  value={activeVariant.body}
-                  onChange={(e) => handleContentChange(activeVariant.hook, e.target.value)}
-                  placeholder="Основная ценность, выводы, список пунктов или призыв к действию..."
-                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y leading-relaxed"
-                />
-                <div className="flex items-center justify-between pt-3 mt-2 border-t border-surface-800/80 text-xs text-slate-400">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => wrapBody("**", "**")}
-                      className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded"
-                      title="Жирный"
-                    >
-                      <b>B</b>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => wrapBody("_", "_")}
-                      className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded italic"
-                      title="Курсив"
-                    >
-                      <i>I</i>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={applyBodyList}
-                      className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded"
-                      title="Список"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => wrapBody("", " 😀")}
-                      className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded"
-                      title="Смайлики"
-                    >
-                      😀
-                    </button>
-                  </div>
-                  <span className="text-[11px] font-mono text-slate-400 shrink-0">
-                    {[...activeVariant.body].length} знака
-                  </span>
-                </div>
-              </div>
-
-              <MediaGallery
-                key={`${selectedPost.id}:${activeVariant.id}`}
-                postId={selectedPost.id}
-                variantId={activeVariant.id}
-                onPreviewChange={handlePreviewMedia}
-              />
-
-              <TwitterPreview
-                variant={activeVariant}
-                userName={userProfile.name}
-                userHandle={userProfile.handle}
-                avatarUrl={userProfile.avatarUrl}
-                status={selectedPost.status}
-                media={previewMedia}
-                onMarkPosted={handleMarkPosted}
-              />
-
-              <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    4. Заметки и гипотеза:
-                  </label>
-                </div>
-                <textarea
-                  value={selectedPost.notes}
-                  onChange={(e) => {
-                    const newNotes = e.target.value;
-                    ApiClient.updatePost(selectedPost.id, { notes: newNotes });
-                    setPosts(
-                      posts.map((p) => (p.id === selectedPost.id ? { ...p, notes: newNotes } : p))
-                    );
-                  }}
-                  rows={3}
-                  placeholder="Зачем пишем этот пост? Какая гипотеза? Ссылка на источник данных..."
-                  className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y leading-relaxed"
-                />
-                {selectedPost.tweetUrl && (
-                  <div className="mt-2 pt-2 border-t border-surface-800/80 flex items-center gap-2 text-xs text-brand-400">
-                    <span>Ссылка на пост в X:</span>
-                    <a
-                      href={selectedPost.tweetUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="hover:underline flex items-center gap-1 break-all"
-                    >
-                      {selectedPost.tweetUrl}
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          </main>
-        ) : (
-          <main className="flex-1 flex items-center justify-center bg-surface-950 text-slate-500 text-sm">
-            Выберите черновик слева или создайте новый
-          </main>
+        {view === "posts" && (
+          <PostsPage
+            posts={posts}
+            loading={loading}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            activeFilterStatus={activeFilterStatus}
+            onStatusFilterChange={setActiveFilterStatus}
+            statusFilters={statusFilters}
+            tags={tags}
+            selectedTags={selectedTags}
+            onTagsChange={setSelectedTags}
+            onSelectPost={(id) => {
+              setSelectedPostId(id);
+              setView("editor");
+            }}
+            onDeletePost={handleDeletePost}
+            onCreatePost={handleCreatePost}
+          />
         )}
 
-        {/* Right Column: AI Copilot Assistant */}
-        {selectedPost && activeVariant && (
-          <div className="w-80 border-l border-[#162032] bg-[#0c111c]/60 flex flex-col shrink-0 min-h-0 h-full">
-            <AiCopilotPanel
-              currentText={activeVariant.fullText}
-              onApplyText={(text) => {
-                const parts = text.split("\n\n");
-                handleContentChange(parts[0] || "", parts.slice(1).join("\n\n"));
-              }}
-              onApplyHook={(hook) => handleContentChange(hook, activeVariant.body)}
-              onAddAsVariant={async (hook) => {
-                await ApiClient.addVariant(selectedPost.id, {
-                  hook,
-                  body: activeVariant.body,
-                  label: `AI Хук ${selectedPost.variants.length + 1}`
-                });
-                loadPosts();
-              }}
-            />
-          </div>
+        {view === "playbook" && (
+          <PlaybookPage
+            methodologies={methodologies}
+            toneProfile={toneProfile}
+            onInsertTemplate={handleInsertTemplate}
+            onSaveMethodology={async (data) => {
+              await ApiClient.saveMethodology(data);
+              loadPlaybook();
+            }}
+            onDeleteMethodology={async (id) => {
+              await ApiClient.deleteMethodology(id);
+              loadPlaybook();
+            }}
+            onSaveToneProfile={async (data) => {
+              await ApiClient.saveToneProfile(data);
+              loadPlaybook();
+            }}
+          />
+        )}
+
+        {view === "editor" && (
+          <>
+            {selectedPost && activeVariant ? (
+              <main className="flex-1 flex flex-col min-w-0 bg-surface-950 overflow-y-auto">
+                <div className="border-b border-surface-800 bg-surface-900/40 shrink-0">
+                  <div className="max-w-4xl w-full mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <StudioSelect
+                        aria-label="Статус поста"
+                        value={selectedPost.status}
+                        options={postStatusOptions}
+                        onChange={handleStatusChange}
+                      />
+                      <TagEditor tags={selectedPost.tags} onChangeTags={handleTagsChange} />
+                    </div>
+                    <div className="flex items-center space-x-2 bg-surface-900 px-3 py-1 rounded-lg border border-surface-800 shrink-0">
+                      <span className="text-xs text-slate-400">Лимит символов:</span>
+                      <div className="flex items-center space-x-1.5">
+                        <span className="text-xs font-bold text-slate-200">{activeVariant.charCount}</span>
+                        <span className="text-xs text-slate-500">/ 280</span>
+                        <svg className="w-4 h-4 -rotate-90 text-brand-500" viewBox="0 0 36 36">
+                          <path
+                            className="text-surface-800"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3.5"
+                          />
+                          <path
+                            className={
+                              activeVariant.isOverLimit
+                                ? "text-rose-500"
+                                : activeVariant.remainingChars <= 20
+                                  ? "text-amber-400"
+                                  : "text-brand-500"
+                            }
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeDasharray={`${Math.min(100, (activeVariant.charCount / 280) * 100)}, 100`}
+                            strokeLinecap="round"
+                            strokeWidth="3.5"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="max-w-4xl w-full mx-auto px-6 py-6 space-y-6">
+                  <VariantTabs
+                    variants={selectedPost.variants}
+                    activeVariantId={activeVariant.id}
+                    onSelectVariant={handleSelectVariant}
+                    onAddVariant={handleAddVariant}
+                    onDeleteVariant={handleDeleteVariant}
+                    onUpdateLabel={async (variantId, label) => {
+                      await ApiClient.updatePost(selectedPost.id, { variantId, variantLabel: label });
+                      loadPosts();
+                    }}
+                  />
+
+                  <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-brand-400">
+                        1. Хук (первая строчка твита):
+                      </label>
+                      <button
+                        type="button"
+                        title="Копировать хук"
+                        onClick={() => copyField("hook", activeVariant.hook)}
+                        className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-brand-300 hover:border-brand-500/40 hover:bg-brand-500/10 transition-colors shrink-0"
+                      >
+                        {copiedField === "hook" ? (
+                          <Check className="size-3 text-emerald-400" strokeWidth={2.5} />
+                        ) : (
+                          <CopyGlyph className="size-3.5" />
+                        )}
+                      </button>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={activeVariant.hook}
+                      onChange={(e) => handleContentChange(e.target.value, activeVariant.body)}
+                      placeholder="Напишите провокационный хук, вопрос или интригующий факт..."
+                      className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y"
+                    />
+                    <div className="mt-1.5 flex items-start justify-between gap-3">
+                      <p className="text-[11px] text-slate-500 min-w-0">
+                        <Info
+                          className="mr-1.5 inline-block size-[13px] align-[-2px] text-amber-400"
+                          strokeWidth={2}
+                          aria-hidden
+                        />
+                        Совет: хук должен заставить нажать «Показать ещё» или открыть тред.
+                      </p>
+                      <span className="text-[11px] font-mono text-slate-400 shrink-0 pt-px">
+                        {[...activeVariant.hook].length} знака
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        2. Тело поста (раскрытие мысли или тред):
+                      </label>
+                      <button
+                        type="button"
+                        title="Копировать тело"
+                        onClick={() => copyField("body", activeVariant.body)}
+                        className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-brand-300 hover:border-brand-500/40 hover:bg-brand-500/10 transition-colors shrink-0"
+                      >
+                        {copiedField === "body" ? (
+                          <Check className="size-3 text-emerald-400" strokeWidth={2.5} />
+                        ) : (
+                          <CopyGlyph className="size-3.5" />
+                        )}
+                      </button>
+                    </div>
+                    <textarea
+                      ref={bodyRef}
+                      rows={5}
+                      value={activeVariant.body}
+                      onChange={(e) => handleContentChange(activeVariant.hook, e.target.value)}
+                      placeholder="Основная ценность, выводы, список пунктов или призыв к действию..."
+                      className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y leading-relaxed"
+                    />
+                    <div className="flex items-center justify-between pt-3 mt-2 border-t border-surface-800/80 text-xs text-slate-400">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => wrapBody("**", "**")}
+                          className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded"
+                          title="Жирный"
+                        >
+                          <b>B</b>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => wrapBody("_", "_")}
+                          className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded italic"
+                          title="Курсив"
+                        >
+                          <i>I</i>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={applyBodyList}
+                          className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded"
+                          title="Список"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => wrapBody("", " 😀")}
+                          className="p-1 hover:text-slate-200 hover:bg-surface-800 rounded"
+                          title="Смайлики"
+                        >
+                          😀
+                        </button>
+                      </div>
+                      <span className="text-[11px] font-mono text-slate-400 shrink-0">
+                        {[...activeVariant.body].length} знака
+                      </span>
+                    </div>
+                  </div>
+
+                  <MediaGallery
+                    key={`${selectedPost.id}:${activeVariant.id}`}
+                    postId={selectedPost.id}
+                    variantId={activeVariant.id}
+                    onPreviewChange={handlePreviewMedia}
+                  />
+
+                  <TwitterPreview
+                    variant={activeVariant}
+                    userName={userProfile.name}
+                    userHandle={userProfile.handle}
+                    avatarUrl={userProfile.avatarUrl}
+                    status={selectedPost.status}
+                    media={previewMedia}
+                    onMarkPosted={handleMarkPosted}
+                  />
+
+                  <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        4. Заметки и гипотеза:
+                      </label>
+                    </div>
+                    <textarea
+                      value={selectedPost.notes}
+                      onChange={(e) => {
+                        const newNotes = e.target.value;
+                        ApiClient.updatePost(selectedPost.id, { notes: newNotes });
+                        setPosts(
+                          posts.map((p) => (p.id === selectedPost.id ? { ...p, notes: newNotes } : p))
+                        );
+                      }}
+                      rows={3}
+                      placeholder="Зачем пишем этот пост? Какая гипотеза? Ссылка на источник данных..."
+                      className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y leading-relaxed"
+                    />
+                    {selectedPost.tweetUrl && (
+                      <div className="mt-2 pt-2 border-t border-surface-800/80 flex items-center gap-2 text-xs text-brand-400">
+                        <span>Ссылка на пост в X:</span>
+                        <a
+                          href={selectedPost.tweetUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:underline flex items-center gap-1 break-all"
+                        >
+                          {selectedPost.tweetUrl}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </main>
+            ) : (
+              <main className="flex-1 flex flex-col items-center justify-center gap-4 bg-surface-950 text-slate-500 text-sm">
+                <p>Выберите пост на странице «Посты» или создайте новый</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setView("posts")}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium border border-surface-750 bg-surface-900 text-slate-300 hover:bg-surface-850"
+                  >
+                    К постам
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreatePost}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600"
+                  >
+                    <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    Новый черновик
+                  </button>
+                </div>
+              </main>
+            )}
+
+            {selectedPost && activeVariant && (
+              <div className="w-80 border-l border-[#162032] bg-[#0c111c]/60 flex flex-col shrink-0 min-h-0 h-full">
+                <AiCopilotPanel
+                  currentText={activeVariant.fullText}
+                  onApplyText={(text) => {
+                    const parts = text.split("\n\n");
+                    handleContentChange(parts[0] || "", parts.slice(1).join("\n\n"));
+                  }}
+                  onApplyHook={(hook) => handleContentChange(hook, activeVariant.body)}
+                  onAddAsVariant={async (hook) => {
+                    await ApiClient.addVariant(selectedPost.id, {
+                      hook,
+                      body: activeVariant.body,
+                      label: `AI Хук ${selectedPost.variants.length + 1}`
+                    });
+                    loadPosts();
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
-
-      {/* Modals */}
-      <PlaybookModal
-        isOpen={isPlaybookOpen}
-        onClose={() => setIsPlaybookOpen(false)}
-        methodologies={methodologies}
-        toneProfile={toneProfile}
-        onInsertTemplate={handleInsertTemplate}
-        onSaveMethodology={async (data) => {
-          await ApiClient.saveMethodology(data);
-          loadPlaybook();
-        }}
-        onDeleteMethodology={async (id) => {
-          await ApiClient.deleteMethodology(id);
-          loadPlaybook();
-        }}
-        onSaveToneProfile={async (data) => {
-          await ApiClient.saveToneProfile(data);
-          loadPlaybook();
-        }}
-      />
 
       <SettingsModal
         isOpen={isSettingsOpen}
