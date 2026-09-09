@@ -5,6 +5,10 @@ export interface StudioSelectOption {
   id: string;
   label: string;
   color?: string;
+  /** Короткий лейбл для compact-триггера (без эмодзи) */
+  triggerLabel?: string;
+  /** Класс точки статуса, напр. bg-amber-400 */
+  dotClass?: string;
 }
 
 interface StudioSelectProps {
@@ -13,6 +17,8 @@ interface StudioSelectProps {
   onChange: (value: string) => void;
   className?: string;
   fullWidth?: boolean;
+  compact?: boolean;
+  count?: number;
   "aria-label"?: string;
 }
 
@@ -22,6 +28,8 @@ export const StudioSelect: React.FC<StudioSelectProps> = ({
   onChange,
   className = "",
   fullWidth = false,
+  compact = false,
+  count,
   "aria-label": ariaLabel
 }) => {
   const [open, setOpen] = useState(false);
@@ -31,6 +39,7 @@ export const StudioSelect: React.FC<StudioSelectProps> = ({
     (best, opt) => (opt.label.length > best.length ? opt.label : best),
     active?.label || ""
   );
+  const triggerText = active?.triggerLabel || active?.label || "";
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -46,6 +55,81 @@ export const StudioSelect: React.FC<StudioSelectProps> = ({
       document.removeEventListener("keydown", onKey);
     };
   }, []);
+
+  if (compact) {
+    return (
+      <div ref={rootRef} className={`relative ${fullWidth ? "w-full" : "min-w-0"} ${className}`}>
+        <button
+          type="button"
+          aria-label={ariaLabel}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          onClick={() => setOpen((v) => !v)}
+          className={`w-full h-8 flex items-center justify-between gap-2 px-2.5 rounded-lg bg-surface-850 hover:bg-surface-800 border text-xs font-medium text-left transition-colors ${
+            open ? "border-brand-500" : "border-surface-750"
+          }`}
+        >
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${active?.dotClass || "bg-slate-400"}`}
+              aria-hidden
+            />
+            <span className={`truncate font-semibold ${active?.color || "text-slate-200"}`}>
+              {triggerText}
+            </span>
+            {typeof count === "number" && (
+              <span className="text-[10px] text-slate-500 font-mono tabular-nums shrink-0">
+                ({count})
+              </span>
+            )}
+          </span>
+          <ChevronDown
+            className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {open && (
+          <div
+            role="listbox"
+            className="absolute left-0 top-full mt-1.5 z-50 w-52 rounded-xl border border-surface-750 bg-surface-900 shadow-2xl shadow-black overflow-hidden"
+          >
+            <div className="p-1.5 max-h-64 overflow-y-auto">
+              {options.map((opt) => {
+                const isOn = opt.id === value;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="option"
+                    aria-selected={isOn}
+                    onClick={() => {
+                      onChange(opt.id);
+                      setOpen(false);
+                    }}
+                    className={`flex items-center justify-between w-full gap-3 px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors ${
+                      isOn
+                        ? "bg-brand-500/10 text-white font-semibold"
+                        : "text-slate-300 hover:bg-surface-800 hover:text-white"
+                    }`}
+                  >
+                    <span className={`flex items-center gap-2 min-w-0 ${isOn ? "" : opt.color || ""}`}>
+                      {opt.dotClass ? (
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotClass}`} aria-hidden />
+                      ) : null}
+                      <span className="truncate font-medium">{opt.label}</span>
+                    </span>
+                    {isOn && <Check className="w-3.5 h-3.5 text-brand-400 shrink-0" strokeWidth={2.5} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div ref={rootRef} className={`relative ${fullWidth ? "w-full" : "w-max"} ${className}`}>

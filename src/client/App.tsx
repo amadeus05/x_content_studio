@@ -638,13 +638,13 @@ export const App: React.FC = () => {
   };
 
   const statusFilters = [
-    { id: "ALL", label: "Все статусы", color: "text-slate-200" },
-    { id: "IDEA", label: "💡 Идея", color: "text-sky-400" },
-    { id: "DRAFT", label: "🔥 Черновик", color: "text-amber-400" },
-    { id: "AI_REVIEW", label: "👀 На ревью", color: "text-ai-400" },
-    { id: "READY", label: "🚀 Готов", color: "text-brand-400" },
-    { id: "POSTED", label: "📅 Запощен", color: "text-emerald-400" },
-    { id: "ARCHIVED", label: "📦 Архив", color: "text-slate-500" }
+    { id: "ALL", label: "Все статусы", triggerLabel: "Все статусы", color: "text-slate-200", dotClass: "bg-slate-400" },
+    { id: "IDEA", label: "💡 Идея", triggerLabel: "Идеи", color: "text-sky-400", dotClass: "bg-sky-400" },
+    { id: "DRAFT", label: "🔥 Черновик", triggerLabel: "Черновики", color: "text-amber-400", dotClass: "bg-amber-400" },
+    { id: "AI_REVIEW", label: "👀 На ревью", triggerLabel: "На ревью", color: "text-ai-400", dotClass: "bg-ai-400" },
+    { id: "READY", label: "🚀 Готов", triggerLabel: "Готовы", color: "text-brand-400", dotClass: "bg-brand-400" },
+    { id: "POSTED", label: "📅 Запощен", triggerLabel: "Запощены", color: "text-emerald-400", dotClass: "bg-emerald-400" },
+    { id: "ARCHIVED", label: "📦 Архив", triggerLabel: "Архив", color: "text-slate-500", dotClass: "bg-slate-500" }
   ];
 
   const postStatusOptions = [
@@ -790,16 +790,20 @@ export const App: React.FC = () => {
       {/* Main Workspace (3 columns) */}
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-80 border-r border-surface-800 bg-surface-900/60 flex flex-col shrink-0">
-          <div className="p-3 border-b border-surface-800/80 space-y-2">
-            <StudioSelect
-              aria-label="Фильтр по статусу"
-              fullWidth
-              value={activeFilterStatus}
-              options={statusFilters}
-              onChange={setActiveFilterStatus}
-            />
-
-            <TagFilter tags={tags} selected={selectedTags} onChange={setSelectedTags} />
+          <div className="p-2.5 border-b border-surface-800/80 bg-surface-900/40">
+            <div className="flex items-center gap-1.5">
+              <StudioSelect
+                aria-label="Фильтр по статусу"
+                compact
+                fullWidth
+                className="flex-1 min-w-0"
+                value={activeFilterStatus}
+                options={statusFilters}
+                count={posts.length}
+                onChange={setActiveFilterStatus}
+              />
+              <TagFilter compact tags={tags} selected={selectedTags} onChange={setSelectedTags} />
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
