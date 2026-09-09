@@ -144,24 +144,49 @@ export const TwitterPreview: React.FC<TwitterPreviewProps> = ({
 
             {media.length > 0 && (
               <div
-                className={`mt-3 overflow-hidden rounded-2xl border border-surface-800 ${
-                  media.length === 1 ? "" : "grid grid-cols-2 gap-0.5"
+                className={`mt-3 overflow-hidden rounded-2xl border border-[#2f3336] ${
+                  media.length === 1
+                    ? "w-fit max-w-full bg-black"
+                    : "grid grid-cols-2 gap-0.5 bg-[#16181c]"
                 } ${media.length === 3 ? "grid-rows-2" : ""}`}
               >
-                {media.slice(0, 4).map((item, index) => (
-                  <div
-                    key={item.id}
-                    className={`bg-[#16181c] overflow-hidden ${
-                      media.length === 1 ? "max-h-[420px]" : "min-h-[140px] max-h-[220px]"
-                    } ${media.length === 3 && index === 0 ? "row-span-2 max-h-none" : ""}`}
-                  >
-                    {item.kind === "video" ? (
-                      <video src={item.url} controls className="w-full h-full object-cover max-h-[420px]" />
-                    ) : (
-                      <img src={item.url} alt={item.altText || ""} className="w-full h-full object-cover" />
-                    )}
-                  </div>
-                ))}
+                {media.slice(0, 4).map((item, index) => {
+                  const isSingle = media.length === 1;
+                  return (
+                    <div
+                      key={item.id}
+                      className={
+                        isSingle
+                          ? "max-h-[510px]"
+                          : `overflow-hidden min-h-[140px] max-h-[220px] ${
+                              media.length === 3 && index === 0 ? "row-span-2 max-h-none" : ""
+                            }`
+                      }
+                    >
+                      {item.kind === "video" ? (
+                        <video
+                          src={item.url}
+                          controls
+                          className={
+                            isSingle
+                              ? "block max-w-full max-h-[510px] w-auto h-auto"
+                              : "w-full h-full object-cover"
+                          }
+                        />
+                      ) : (
+                        <img
+                          src={item.url}
+                          alt={item.altText || ""}
+                          className={
+                            isSingle
+                              ? "block max-w-full max-h-[510px] w-auto h-auto"
+                              : "w-full h-full object-cover"
+                          }
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
