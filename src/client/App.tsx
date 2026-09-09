@@ -841,11 +841,13 @@ export const App: React.FC = () => {
                 />
                 <TagEditor tags={selectedPost.tags} onChangeTags={handleTagsChange} />
               </div>
-              <div className="flex items-center space-x-2 bg-surface-900 px-3 py-1 rounded-lg border border-surface-800">
+              <div className="flex items-center space-x-2 bg-surface-900 px-3 py-1 rounded-lg border border-surface-800 shrink-0">
                 <span className="text-xs text-slate-400">Лимит символов:</span>
                 <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-bold text-slate-200">{totalChars}</span>
-                  <span className="text-xs text-slate-500">/ 280</span>
+                  <span className="text-xs font-bold text-slate-200 tabular-nums inline-block min-w-[4ch] text-right">
+                    {totalChars}
+                  </span>
+                  <span className="text-xs text-slate-500 tabular-nums">/ 280</span>
                   <svg className="w-4 h-4 -rotate-90 text-brand-500" viewBox="0 0 36 36">
                     <path
                       className="text-surface-800"
