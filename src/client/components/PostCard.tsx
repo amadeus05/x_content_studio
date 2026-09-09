@@ -40,12 +40,10 @@ function StatusBadge({ status, isSelected }: { status: string; isSelected: boole
 
   if (status === "DRAFT") {
     return (
-      <span
-        className={`inline-flex items-center space-x-1 font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md ${
-          isSelected ? "border border-amber-400/20" : ""
-        }`}
-      >
-        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+      <span className="inline-flex items-center space-x-1 font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20">
+        <span
+          className={`w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 ${isSelected ? "animate-pulse" : "opacity-0"}`}
+        />
         <span>Черновик</span>
       </span>
     );
@@ -79,25 +77,26 @@ export const PostCard: React.FC<PostCardProps> = ({ post, isSelected, onSelect, 
   const isPosted = post.status === "POSTED";
   const reach = formatReach(post.metrics.impressions);
   const dateLabel = formatListDate(post.updatedAt);
+  const hasVariants = post.variants.length > 1;
 
   return (
     <div
       onClick={onSelect}
-      className={`p-3 rounded-xl cursor-pointer select-none relative group transition-all ${
+      className={`p-3 rounded-xl cursor-pointer select-none relative group box-border border-2 transition-colors flex flex-col ${
         isSelected
-          ? "bg-surface-850/90 border-2 border-brand-500/70 shadow-lg shadow-black/40"
-          : "bg-surface-900/90 border border-surface-800/90 hover:border-surface-700 hover:bg-surface-850/50"
+          ? "bg-surface-850/90 border-brand-500/70 shadow-lg shadow-black/40"
+          : "bg-surface-900/90 border-transparent hover:border-surface-700/80 hover:bg-surface-850/50"
       }`}
     >
-      <div className="flex items-center justify-between text-[11px] mb-1.5">
+      <div className="flex items-center justify-between text-[11px] mb-1.5 shrink-0 h-5">
         <StatusBadge status={post.status} isSelected={isSelected} />
         <div className={`flex items-center space-x-1.5 ${isSelected ? "text-slate-400" : "text-slate-500"}`}>
-          {isSelected && <Clock className="w-3 h-3" />}
-          <span>{dateLabel}</span>
+          <Clock className={`w-3 h-3 shrink-0 ${isSelected ? "" : "opacity-0"}`} aria-hidden={!isSelected} />
+          <span className="tabular-nums">{dateLabel}</span>
           <button
             type="button"
             onClick={onDelete}
-            className="text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition p-0.5"
+            className="text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 shrink-0"
             title="Удалить пост"
           >
             <Trash2 className="w-3 h-3" />
@@ -106,51 +105,67 @@ export const PostCard: React.FC<PostCardProps> = ({ post, isSelected, onSelect, 
       </div>
 
       <h4
-        className={`text-xs leading-relaxed line-clamp-2 ${
-          isSelected ? "font-semibold text-white mb-1.5" : isPosted ? "font-medium text-slate-400 mb-1" : "font-semibold text-slate-300 mb-1"
+        className={`text-xs font-semibold leading-snug line-clamp-2 h-8 shrink-0 mb-1 ${
+          isSelected ? "text-white" : isPosted ? "text-slate-400" : "text-slate-300"
         }`}
       >
         {hook}
       </h4>
 
-      {!isPosted && bodySnippet && (
-        <p className={`text-[11px] line-clamp-2 ${isSelected ? "text-slate-400 mb-3" : "text-slate-500 mb-2.5"}`}>
-          {bodySnippet}
+      {!isPosted ? (
+        <p
+          className={`text-[11px] leading-snug line-clamp-2 h-7 shrink-0 mb-2 ${
+            isSelected ? "text-slate-400" : "text-slate-500"
+          }`}
+        >
+          {bodySnippet || "\u00A0"}
         </p>
+      ) : (
+        <div className="h-7 shrink-0 mb-2" aria-hidden />
       )}
 
       {isPosted ? (
-        <div className="flex items-center justify-between pt-1.5 text-[10px] text-slate-500">
-          <span className="text-brand-400">{reach || "Нет охвата"}</span>
-          <span>{post.metrics.retweets ? `${post.metrics.retweets} репостов` : "Без репостов"}</span>
+        <div className="flex items-center justify-between pt-2 border-t border-surface-800/60 text-[10px] text-slate-500 shrink-0 h-6">
+          <span className="text-brand-400 truncate">{reach || "Нет охвата"}</span>
+          <span className="shrink-0">{post.metrics.retweets ? `${post.metrics.retweets} репостов` : "Без репостов"}</span>
         </div>
       ) : (
-        <div className={`flex items-center justify-between pt-2 border-t text-[10px] ${isSelected ? "border-surface-800" : "border-surface-800/60 text-slate-500"}`}>
-          <div className="flex items-center space-x-1 min-w-0">
-            {post.tags[0] && (
-              <span className={isSelected ? "text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded" : "bg-surface-800/80 px-1.5 py-0.5 rounded text-slate-400"}>
+        <div className="flex items-center justify-between pt-2 border-t border-surface-800/60 text-[10px] text-slate-500 shrink-0 h-6">
+          <div className="flex items-center space-x-1 min-w-0 h-4">
+            {post.tags[0] ? (
+              <span
+                className={
+                  isSelected
+                    ? "text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded truncate max-w-[5rem]"
+                    : "bg-surface-800/80 px-1.5 py-0.5 rounded text-slate-400 truncate max-w-[5rem]"
+                }
+              >
                 #{post.tags[0]}
               </span>
+            ) : (
+              <span className="w-0 h-4" aria-hidden />
             )}
             {post.tags.length > 1 && (
-              <span className="text-slate-400 bg-surface-800 px-1.5 py-0.5 rounded">+{post.tags.length - 1}</span>
+              <span className="text-slate-400 bg-surface-800 px-1.5 py-0.5 rounded shrink-0">+{post.tags.length - 1}</span>
             )}
           </div>
-          <div className="flex items-center space-x-2 text-slate-400 shrink-0">
-            {post.variants.length > 1 && (
-              <span className="text-ai-400 font-medium flex items-center space-x-1">
-                <Sparkles className="w-2.5 h-2.5" />
-                <span>{post.variants.length} вар.</span>
-              </span>
-            )}
+          <div className="flex items-center space-x-2 shrink-0">
             <span
-              className={
+              className={`text-ai-400 font-medium inline-flex items-center space-x-1 w-[3.25rem] justify-end ${
+                hasVariants ? "" : "invisible"
+              }`}
+            >
+              <Sparkles className="w-2.5 h-2.5 shrink-0" />
+              <span>{post.variants.length} вар.</span>
+            </span>
+            <span
+              className={`tabular-nums min-w-[3.25rem] text-right ${
                 activeVariant.isOverLimit
                   ? "text-rose-400"
                   : activeVariant.remainingChars <= 20
                     ? "text-amber-400"
-                    : ""
-              }
+                    : "text-slate-400"
+              }`}
             >
               {activeVariant.charCount}/280
             </span>
