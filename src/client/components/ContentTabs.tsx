@@ -100,6 +100,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = ({
 
   const isPurple = theme === "purple";
   const isEmerald = theme === "emerald";
+  const withPinSlot = items.some((i) => i.isPinned !== undefined);
 
   const themeColors = isPurple
     ? {
@@ -209,14 +210,18 @@ export const ContentTabs: React.FC<ContentTabsProps> = ({
                     handleSelect(item.id);
                   }
                 }}
-                className={`group flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs shrink-0 cursor-pointer transition-all ${
+                className={`group flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-semibold shrink-0 cursor-pointer outline-none transition-colors ${
                   isActive
-                    ? `font-semibold ${themeColors.activeTab}`
-                    : "font-medium text-slate-400 hover:text-slate-200 hover:bg-surface-850"
+                    ? themeColors.activeTab
+                    : "text-slate-400 hover:text-slate-200 hover:bg-surface-850"
                 }`}
               >
-                {item.isPinned && (
-                  <span title="Закреплено" className="shrink-0 flex items-center">
+                {withPinSlot && (
+                  <span
+                    title={item.isPinned ? "Закреплено" : undefined}
+                    className={`shrink-0 flex items-center ${item.isPinned ? "" : "invisible"}`}
+                    aria-hidden={!item.isPinned}
+                  >
                     <Pin
                       className={`w-2.5 h-2.5 rotate-45 ${
                         isActive ? "text-amber-300 fill-amber-300" : "text-amber-400/70"
@@ -227,8 +232,8 @@ export const ContentTabs: React.FC<ContentTabsProps> = ({
                 <span className="truncate max-w-[140px]">{item.label}</span>
                 {item.charCount !== undefined && (
                   <span
-                    className={`text-[10px] ${
-                      isActive ? "opacity-85 font-normal" : "opacity-60"
+                    className={`text-[10px] font-normal tabular-nums ${
+                      isActive ? "opacity-85" : "opacity-60"
                     }`}
                   >
                     {item.charCount} зн.
@@ -254,7 +259,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = ({
                   >
                     <Edit2 className="size-2.5" />
                   </button>
-                  {items.length > 1 && (
+                  {items.length > 1 ? (
                     <button
                       type="button"
                       title="Удалить"
@@ -270,7 +275,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = ({
                     >
                       <Trash2 className="size-2.5" />
                     </button>
-                  )}
+                  ) : null}
                 </span>
               </div>
             );
@@ -281,7 +286,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = ({
       <button
         type="button"
         onClick={onAdd}
-        className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent transition-all shrink-0 ${themeColors.addBtn}`}
+        className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent transition-colors shrink-0 ${themeColors.addBtn}`}
       >
         <Plus className="w-3.5 h-3.5" />
         <span>{addButtonText}</span>
