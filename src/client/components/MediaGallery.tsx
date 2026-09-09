@@ -94,13 +94,18 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
 
   useEffect(() => {
     const source = variantItems.length > 0 ? variantItems : postItems;
+    const cover = source.find((item) => item.isPrimary);
     onPreviewChangeRef.current(
-      source.map((item) => ({
-        id: item.id,
-        kind: item.kind,
-        url: blobUrls[item.id] || item.url,
-        altText: item.altText
-      }))
+      cover
+        ? [
+            {
+              id: cover.id,
+              kind: cover.kind,
+              url: blobUrls[cover.id] || cover.url,
+              altText: cover.altText
+            }
+          ]
+        : []
     );
   }, [postItems, variantItems, blobUrls]);
 
