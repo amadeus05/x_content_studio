@@ -43,20 +43,20 @@ export const TagEditor: React.FC<TagEditorProps> = ({ tags, onChangeTags }) => {
   };
 
   return (
-    <div className="flex items-center flex-nowrap gap-1 h-8 overflow-x-auto bg-surface-850 border border-surface-750 rounded-lg px-2.5 text-xs text-slate-300 focus-within:border-brand-500">
+    <div className="flex items-center flex-nowrap gap-1 py-1.5 overflow-x-auto bg-surface-850 border border-surface-750 rounded-lg px-2.5 text-xs leading-none text-slate-300 focus-within:border-brand-500">
       <span className="text-slate-500 leading-none shrink-0">#</span>
       {tags.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center h-5 shrink-0 rounded-full border border-brand-500/30 bg-brand-500/15 pl-1.5 pr-0.5"
+          className="inline-flex items-center h-4 shrink-0 rounded-full border border-brand-500/30 bg-brand-500/15 pl-1.5 pr-0.5"
         >
-          <span className="text-[11px] font-medium leading-none text-brand-400 translate-y-px">
+          <span className="text-[11px] font-medium leading-none text-brand-400">
             #{tag}
           </span>
           <button
             type="button"
             onClick={() => removeTag(tag)}
-            className="flex h-5 w-3.5 items-center justify-center text-brand-400 hover:text-rose-400"
+            className="flex h-4 w-3.5 items-center justify-center text-brand-400 hover:text-rose-400"
             title="Удалить тег"
           >
             <X className="block size-2.5" strokeWidth={2.25} aria-hidden />

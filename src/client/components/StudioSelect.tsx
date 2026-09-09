@@ -27,6 +27,10 @@ export const StudioSelect: React.FC<StudioSelectProps> = ({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const active = options.find((o) => o.id === value) || options[0];
+  const longestLabel = options.reduce(
+    (best, opt) => (opt.label.length > best.length ? opt.label : best),
+    active?.label || ""
+  );
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -44,20 +48,31 @@ export const StudioSelect: React.FC<StudioSelectProps> = ({
   }, []);
 
   return (
-    <div ref={rootRef} className={`relative ${fullWidth ? "w-full" : ""} ${className}`}>
+    <div ref={rootRef} className={`relative ${fullWidth ? "w-full" : "w-max"} ${className}`}>
       <button
         type="button"
         aria-label={ariaLabel}
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center h-8 bg-surface-850 hover:bg-surface-800 border rounded-lg pl-2.5 pr-8 text-xs font-semibold text-left transition-colors ${
-          fullWidth ? "w-full" : "min-w-[9.5rem]"
+        className={`relative flex items-center bg-surface-850 hover:bg-surface-800 border rounded-lg pl-2.5 pr-8 py-1.5 text-xs font-semibold text-left transition-colors ${
+          fullWidth ? "w-full" : ""
         } ${
           open ? "border-brand-500" : "border-surface-750 focus:border-brand-500"
         } ${active?.color || "text-slate-200"}`}
       >
-        <span className="truncate">{active?.label}</span>
+        {!fullWidth && (
+          <span className="invisible whitespace-nowrap pointer-events-none select-none" aria-hidden>
+            {longestLabel}
+          </span>
+        )}
+        <span
+          className={`truncate ${
+            fullWidth ? "" : "absolute inset-y-0 left-2.5 right-8 flex items-center"
+          }`}
+        >
+          {active?.label}
+        </span>
         <span className="absolute inset-y-0 right-0 flex items-center px-2 text-slate-400 pointer-events-none">
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
         </span>

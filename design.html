@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+
+<html class="dark h-full" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>X Content Studio — Рабочее место автора</title>
+<!-- Tailwind CSS CDN with forms and container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              400: '#38bdf8',
+              500: '#1d9bf0', // Authentic X/Twitter blue
+              600: '#0284c7',
+              700: '#0369a1',
+            },
+            surface: {
+              950: '#080c14',
+              900: '#0c111c',
+              850: '#111827',
+              800: '#162032',
+              750: '#1e293b',
+              700: '#334155',
+            },
+            ai: {
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style data-purpose="custom-scrollbars">
+    /* Custom sleek dark scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+<style data-purpose="typography-and-helpers">
+    body {
+      font-family: 'Inter', sans-serif;
+      color-scheme: dark;
+    }
+    .badge-ring {
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="h-full bg-surface-950 text-slate-200 antialiased flex flex-col overflow-hidden selection:bg-brand-500/30 selection:text-brand-400">
+<!-- BEGIN: MainHeader -->
+<header class="h-14 border-b border-surface-800 bg-surface-900/90 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0 select-none">
+<!-- Left: Brand Identity & Search -->
+<div class="flex items-center space-x-6">
+<div class="flex items-center space-x-2.5">
+<!-- Logo icon representing modern X spark -->
+<div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-base">
+<svg class="w-4 h-4 fill-current" viewbox="0 0 24 24">
+<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+</svg>
+</div>
+<div class="flex items-center space-x-2">
+<span class="font-bold text-white tracking-tight text-sm">X Content Studio</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/30">PRO</span>
+</div>
+</div>
+<!-- Quick Global Search with shortcut -->
+<div class="relative w-72 hidden md:block">
+<span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</span>
+<input class="w-full pl-9 pr-12 py-1.5 text-xs bg-surface-950/80 border border-surface-750/70 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors" placeholder="Полнотекстовый поиск... (Ctrl+K)" type="text"/>
+<div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+<kbd class="px-1.5 py-0.5 text-[10px] font-medium text-slate-400 bg-surface-800 border border-surface-700 rounded">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- Right: Workspace Actions & User Profile -->
+<div class="flex items-center space-x-3">
+<!-- Methodology & ToV button -->
+<button class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-surface-850 hover:bg-surface-800 border border-surface-750 transition-colors">
+<svg class="w-3.5 h-3.5 text-brand-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Методики &amp; ToV</span>
+</button>
+<!-- Settings Icon Button -->
+<button class="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-surface-850 border border-transparent hover:border-surface-750 transition-colors" title="Настройки студии">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<div class="h-4 w-px bg-surface-800"></div>
+<!-- Primary Action: New Draft -->
+<button class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600 shadow-md shadow-brand-500/25 transition-all">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+<span>Новый черновик</span>
+</button>
+<!-- Account Avatar -->
+<div class="w-7 h-7 rounded-full bg-gradient-to-tr from-brand-500 to-ai-500 p-[1px] cursor-pointer">
+<div class="w-full h-full rounded-full bg-surface-900 flex items-center justify-center font-bold text-[11px] text-white">
+          AP
+        </div>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: ApplicationBody (3-Column Layout) -->
+<div class="flex flex-1 overflow-hidden">
+<!-- BEGIN: LeftSidebar (Drafts & Library) -->
+<aside class="w-80 border-r border-surface-800 bg-surface-900/60 flex flex-col shrink-0">
+<!-- Top Filters & Category Navigation -->
+<div class="p-3 border-b border-surface-800/80 space-y-3">
+<!-- View selector pills -->
+<div class="grid grid-cols-3 gap-1 bg-surface-950 p-1 rounded-lg border border-surface-800/80 text-[11px] font-medium">
+<button class="py-1 px-1.5 text-center text-slate-400 hover:text-slate-200 transition-colors rounded">Идеи</button>
+<button class="py-1 px-1.5 text-center bg-surface-850 text-brand-400 shadow-sm font-semibold rounded">Черновики</button>
+<button class="py-1 px-1.5 text-center text-slate-400 hover:text-slate-200 transition-colors rounded">Архив</button>
+</div>
+<!-- Tag Filters row -->
+<div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
+<span class="text-slate-500 text-[10px] uppercase font-bold tracking-wider mr-0.5">Теги:</span>
+<button class="px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-400 border border-brand-500/30 font-medium whitespace-nowrap">#AI</button>
+<button class="px-2 py-0.5 rounded-full bg-surface-850 hover:bg-surface-800 text-slate-300 border border-surface-750 font-medium whitespace-nowrap">#Продуктивность</button>
+<button class="px-2 py-0.5 rounded-full bg-surface-850 hover:bg-surface-800 text-slate-300 border border-surface-750 font-medium whitespace-nowrap">#Маркетинг</button>
+</div>
+</div>
+<!-- Drafts List -->
+<div class="flex-1 overflow-y-auto p-3 space-y-2.5">
+<!-- Draft Item 1 (Active / Selected) -->
+<div class="p-3 rounded-xl bg-surface-850/90 border-2 border-brand-500/70 shadow-lg shadow-black/40 cursor-pointer relative group transition-all">
+<div class="flex items-center justify-between text-[11px] mb-1.5">
+<span class="inline-flex items-center space-x-1 font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+<span>Черновик</span>
+</span>
+<div class="flex items-center space-x-1.5 text-slate-400">
+<svg class="w-3 h-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>8 сент.</span>
+</div>
+</div>
+<h4 class="text-xs font-semibold text-white leading-relaxed line-clamp-2 mb-1.5">
+            Большинство людей используют ChatGPT как продвинутый Google и упускают 90%...
+          </h4>
+<p class="text-[11px] text-slate-400 line-clamp-2 mb-3">
+            1. Ролевой контекст 2. Ограничение по ToV 3. Запрет на штампы. Сохраняйте в закладки готовые формулы.
+          </p>
+<div class="flex items-center justify-between pt-2 border-t border-surface-800 text-[10px]">
+<div class="flex items-center space-x-1">
+<span class="text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded">#AI</span>
+<span class="text-slate-400 bg-surface-800 px-1.5 py-0.5 rounded">+1</span>
+</div>
+<div class="flex items-center space-x-2 text-slate-400">
+<span class="text-ai-400 font-medium flex items-center space-x-1">
+<svg class="w-2.5 h-2.5" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"></path></svg>
+<span>2 вар.</span>
+</span>
+<span>247/280</span>
+</div>
+</div>
+</div>
+<!-- Draft Item 2 (Standard Inactive) -->
+<div class="p-3 rounded-xl bg-surface-900/90 border border-surface-800/90 hover:border-surface-700 hover:bg-surface-850/50 cursor-pointer transition-all">
+<div class="flex items-center justify-between text-[11px] mb-1.5">
+<span class="inline-flex items-center space-x-1 font-medium text-amber-400/90 bg-amber-400/10 px-2 py-0.5 rounded-md">
+<span>Черновик</span>
+</span>
+<div class="flex items-center space-x-1 text-slate-500">
+<span>Вчера</span>
+</div>
+</div>
+<h4 class="text-xs font-semibold text-slate-300 leading-relaxed line-clamp-2 mb-1">
+            Как собрать 10 000 читателей в X без единого платного промо-поста?
+          </h4>
+<p class="text-[11px] text-slate-500 line-clamp-2 mb-2.5">
+            Пошаговый разбор контентной воронки, структуры тредов и алгоритмических триггеров.
+          </p>
+<div class="flex items-center justify-between pt-2 border-t border-surface-800/60 text-[10px] text-slate-500">
+<span class="bg-surface-800/80 px-1.5 py-0.5 rounded text-slate-400">#Growth</span>
+<span>198/280</span>
+</div>
+</div>
+<!-- Draft Item 3 (Published/Scheduled example) -->
+<div class="p-3 rounded-xl bg-surface-900/90 border border-surface-800/90 hover:border-surface-700 hover:bg-surface-850/50 cursor-pointer transition-all">
+<div class="flex items-center justify-between text-[11px] mb-1.5">
+<span class="inline-flex items-center space-x-1 font-medium text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-md">
+<svg class="w-2.5 h-2.5 fill-current" viewbox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg>
+<span>Запощен</span>
+</span>
+<div class="flex items-center space-x-1 text-slate-500">
+<span>06 сент.</span>
+</div>
+</div>
+<h4 class="text-xs font-medium text-slate-400 leading-snug line-clamp-2 mb-1">
+            Архитектура персонального бренда разработчика в 2024 году.
+          </h4>
+<div class="flex items-center justify-between pt-1.5 text-[10px] text-slate-500">
+<span class="text-brand-400">2.4k охват</span>
+<span>18 репостов</span>
+</div>
+</div>
+</div>
+<!-- Bottom Status / Sync stats -->
+<div class="p-2.5 border-t border-surface-800 bg-surface-950/60 flex items-center justify-between text-[11px] text-slate-500">
+<span class="flex items-center space-x-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>Синхронизировано с X</span>
+</span>
+<span class="font-mono text-[10px]">v2.4</span>
+</div>
+</aside>
+<!-- END: LeftSidebar -->
+<!-- BEGIN: MainContent (Editor + Preview) -->
+<main class="flex-1 flex flex-col min-w-0 bg-surface-950 overflow-y-auto">
+<!-- Sub-header metadata bar -->
+<div class="px-6 py-3 border-b border-surface-800 bg-surface-900/40 flex flex-wrap items-center justify-between gap-4 shrink-0">
+<!-- Left: Status & Tags -->
+<div class="flex items-center space-x-3">
+<!-- Status Dropdown -->
+<div class="relative">
+<label class="sr-only" for="post-status">Статус поста</label>
+<select class="appearance-none bg-surface-850 hover:bg-surface-800 border border-surface-750 text-amber-400 text-xs font-semibold rounded-lg pl-2.5 pr-8 py-1.5 focus:outline-none focus:border-brand-500 cursor-pointer" id="post-status">
+<option>🔥 Черновик</option>
+<option>👀 На ревью</option>
+<option>🚀 Готов к публикации</option>
+<option>📅 Запланирован</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-400">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+<!-- Tags input box -->
+<div class="flex items-center bg-surface-850 border border-surface-750 rounded-lg px-2.5 py-1 text-xs text-slate-300">
+<span class="text-slate-500 mr-1.5">#</span>
+<input class="bg-transparent border-none p-0 text-xs text-slate-200 placeholder-slate-500 focus:ring-0 w-44" placeholder="Теги (Enter для добавления)..." type="text" value="AI, Продуктивность"/>
+</div>
+</div>
+<!-- Right: Progress Indicator & Fast Action -->
+<div class="flex items-center space-x-3">
+<div class="flex items-center space-x-2 bg-surface-900 px-3 py-1 rounded-lg border border-surface-800">
+<span class="text-xs text-slate-400">Лимит символов:</span>
+<div class="flex items-center space-x-1.5">
+<span class="text-xs font-bold text-slate-200">247</span>
+<span class="text-xs text-slate-500">/ 280</span>
+<!-- Circular tiny progress -->
+<svg class="w-4 h-4 transform -rotate-90 text-brand-500" viewbox="0 0 36 36">
+<path class="text-surface-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
+<path class="text-brand-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="88, 100" stroke-linecap="round" stroke-width="3.5"></path>
+</svg>
+</div>
+</div>
+</div>
+</div>
+<!-- Editor Content Workspace -->
+<div class="p-6 max-w-4xl w-full mx-auto space-y-6">
+<!-- Variant / Hook Switcher Bar -->
+<div class="flex items-center justify-between bg-surface-900/70 p-2 rounded-xl border border-surface-800">
+<div class="flex items-center space-x-2">
+<span class="text-xs font-bold uppercase tracking-wider text-ai-400 flex items-center space-x-1.5 px-2">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Хуки / Варианты:</span>
+</span>
+<div class="flex items-center space-x-1 bg-surface-950 p-1 rounded-lg border border-surface-800">
+<button class="px-3 py-1 rounded-md text-xs font-semibold bg-brand-500 text-white shadow-sm flex items-center space-x-1.5">
+<span>Вариант 1</span>
+<span class="text-[10px] opacity-80 font-normal">82 зн.</span>
+</button>
+<button class="px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-surface-850 transition-colors flex items-center space-x-1.5">
+<span>Вариант 2</span>
+<span class="text-[10px] opacity-70">76 зн.</span>
+</button>
+<button class="px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-surface-850 transition-colors flex items-center space-x-1.5">
+<span>Вариант 3</span>
+<span class="text-[10px] opacity-70">94 зн.</span>
+</button>
+</div>
+</div>
+<button class="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium text-brand-400 hover:bg-brand-500/10 border border-transparent hover:border-brand-500/20 transition-all">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Новый вариант</span>
+</button>
+</div>
+<!-- Section 1: Hook Input Area -->
+<div class="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-bold uppercase tracking-wider text-brand-400 flex items-center space-x-1.5" for="hook-input">
+<span>1. ХУК (ПЕРВАЯ СТРОЧКА ТВИТА — ЗАХВАТ ВНИМАНИЯ):</span>
+</label>
+<span class="text-[11px] font-mono text-slate-400">82 знака</span>
+</div>
+<textarea class="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y" id="hook-input" placeholder="Напишите парадоксальное или цепляющее утверждение..." rows="2">Большинство людей используют ChatGPT как продвинутый Google и упускают 90% его пользы.</textarea>
+<p class="text-[11px] text-slate-500 mt-1.5 flex items-center space-x-1">
+<svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Совет: Хук должен заставить пользователя нажать «Показать еще» или открыть тред.</span>
+</p>
+</div>
+<!-- Section 2: Post Body / Thread Content -->
+<div class="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5" for="body-input">
+<span>2. ТЕЛО ПОСТА (РАСКРЫТИЕ МЫСЛИ ИЛИ ТРЕД):</span>
+</label>
+<span class="text-[11px] font-mono text-slate-400">165 знаков</span>
+</div>
+<textarea class="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y leading-relaxed font-normal" id="body-input" placeholder="Основная ценность, выводы, список пунктов или призыв к действию..." rows="4">1. Задавайте роль и контекст до задачи
+2. Давайте жесткий запрет на корпоративные штампы
+3. Указывайте нужный Tone-of-Voice
+
+Сохраняйте эти 3 формулы в закладки 📌</textarea>
+<!-- Formatting & Utility Toolbar for Editor -->
+<div class="flex items-center justify-between pt-3 mt-2 border-t border-surface-800/80 text-xs text-slate-400">
+<div class="flex items-center space-x-2">
+<button class="p-1 hover:text-slate-200 hover:bg-surface-800 rounded" title="Жирный"><b>B</b></button>
+<button class="p-1 hover:text-slate-200 hover:bg-surface-800 rounded italic" title="Курсив"><i>I</i></button>
+<button class="p-1 hover:text-slate-200 hover:bg-surface-800 rounded" title="Список">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="p-1 hover:text-slate-200 hover:bg-surface-800 rounded" title="Смайлики">😀</button>
+</div>
+<span class="text-[11px] text-slate-500">Автосохранение 12 сек назад</span>
+</div>
+</div>
+<!-- Section 3: Live Pixel-Perfect X (Twitter) Preview -->
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<!-- Official X Icon style -->
+<svg class="w-4 h-4 fill-white" viewbox="0 0 24 24">
+<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+</svg>
+<span class="text-xs font-bold uppercase tracking-wider text-slate-300">LIVE X PREVIEW</span>
+</div>
+<!-- Preview Actions -->
+<div class="flex items-center space-x-2">
+<button class="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-surface-850 hover:bg-surface-800 border border-surface-750 transition-colors">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Копировать</span>
+</button>
+<button class="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-900/30 transition-all">
+<svg class="w-3.5 h-3.5 fill-current" viewbox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+<span>Запостить в X</span>
+</button>
+</div>
+</div>
+<!-- Realistic X Feed Card -->
+<div class="bg-black border border-surface-800 rounded-2xl p-4 md:p-5 text-white shadow-xl">
+<div class="flex space-x-3">
+<!-- Author Profile Avatar -->
+<div class="shrink-0">
+<div class="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-600 via-indigo-600 to-purple-500 flex items-center justify-center font-bold text-sm text-white ring-2 ring-surface-800">
+                  AP
+                </div>
+</div>
+<!-- Tweet Details -->
+<div class="flex-1 min-w-0">
+<!-- User Header Line -->
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-1.5 leading-snug truncate">
+<span class="font-bold text-slate-100 text-sm hover:underline cursor-pointer">AI Paradox</span>
+<!-- Verified Blue Badge -->
+<svg class="w-4 h-4 text-brand-500 fill-current shrink-0" viewbox="0 0 24 24">
+<path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.79-4-4-4-.495 0-.965.084-1.4.238C14.55 2.475 13.18 1.6 11.6 1.6c-1.58 0-2.95.875-3.6 2.148-.435-.154-.905-.238-1.4-.238-2.21 0-4 1.79-4 4 0 .495.084.965.238 1.4C1.575 10.45.7 11.82.7 13.4c0 1.58.875 2.95 2.148 3.6-.154.435-.238.905-.238 1.4 0 2.21 1.79 4 4 4 .495 0 .965-.084 1.4-.238 1.05 1.273 2.42 2.148 4 2.148 1.58 0 2.95-.875 3.6-2.148.435.154.905.238 1.4.238 2.21 0 4-1.79 4-4 0-.495-.084-.965-.238-1.4 1.273-1.05 2.148-2.42 2.148-4zM10.2 16.2l-3.5-3.5 1.4-1.4 2.1 2.1 5.7-5.7 1.4 1.4-7.1 7.1z"></path>
+</svg>
+<span class="text-slate-500 text-xs truncate">@alex_content</span>
+<span class="text-slate-600 text-xs">·</span>
+<span class="text-slate-500 text-xs whitespace-nowrap">сейчас</span>
+</div>
+<!-- Tweet More Menu -->
+<button class="text-slate-500 hover:text-brand-400 p-1 rounded-full transition-colors">
+<svg class="w-4 h-4" fill="currentColor" viewbox="0 0 24 24"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>
+</button>
+</div>
+<!-- Tweet Body Text Live Render -->
+<div class="mt-2 text-[14px] leading-relaxed text-slate-100 font-normal space-y-2 select-text">
+<p class="font-medium text-white">
+                    Большинство людей используют ChatGPT как продвинутый Google и упускают 90% его пользы.
+                  </p>
+<p class="text-slate-200">
+                    1. Задавайте роль и контекст до задачи<br/>
+                    2. Давайте жесткий запрет на корпоративные штампы<br/>
+                    3. Указывайте нужный Tone-of-Voice
+                  </p>
+<p class="text-slate-300">
+                    Сохраняйте эти 3 формулы в закладки 📌
+                  </p>
+</div>
+<!-- Post Engagement Metrics Bar -->
+<div class="mt-4 pt-3 border-t border-surface-800/80 flex items-center justify-between text-slate-500 max-w-md text-xs">
+<!-- Reply -->
+<div class="flex items-center space-x-1.5 hover:text-brand-400 cursor-pointer transition-colors group">
+<div class="p-1.5 rounded-full group-hover:bg-brand-500/10">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</div>
+<span>12</span>
+</div>
+<!-- Repost / Retweet -->
+<div class="flex items-center space-x-1.5 hover:text-emerald-400 cursor-pointer transition-colors group">
+<div class="p-1.5 rounded-full group-hover:bg-emerald-500/10">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</div>
+<span>8</span>
+</div>
+<!-- Likes -->
+<div class="flex items-center space-x-1.5 hover:text-rose-500 cursor-pointer transition-colors group">
+<div class="p-1.5 rounded-full group-hover:bg-rose-500/10">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</div>
+<span>142</span>
+</div>
+<!-- Bookmark -->
+<div class="flex items-center space-x-1.5 hover:text-brand-400 cursor-pointer transition-colors group">
+<div class="p-1.5 rounded-full group-hover:bg-brand-500/10">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</div>
+<span>38</span>
+</div>
+<!-- Share -->
+<div class="flex items-center hover:text-brand-400 cursor-pointer transition-colors group">
+<div class="p-1.5 rounded-full group-hover:bg-brand-500/10">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: RightSidebar (AI Copilot Assistant) -->
+<aside class="w-80 border-l border-surface-800 bg-surface-900/60 flex flex-col shrink-0">
+<!-- AI Header -->
+<div class="p-3.5 border-b border-surface-800 flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<div class="w-6 h-6 rounded-lg bg-ai-500/20 border border-ai-500/40 flex items-center justify-center text-ai-400">
+<svg class="w-3.5 h-3.5" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"></path>
+</svg>
+</div>
+<span class="text-xs font-bold uppercase tracking-wider text-slate-100">AI Copilot</span>
+</div>
+<!-- Model selector pill -->
+<div class="relative">
+<select class="appearance-none bg-surface-950 border border-surface-800 text-slate-300 text-[11px] font-medium rounded-md pl-2 pr-6 py-1 focus:outline-none cursor-pointer">
+<option>Claude 3.5 Sonnet</option>
+<option>GPT-4o</option>
+<option>Grok-2</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-1.5 pointer-events-none text-slate-500">
+<svg class="w-3 h-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<!-- Quick AI Action Buttons Grid -->
+<div class="p-3 border-b border-surface-800/80">
+<span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Быстрые генераторы</span>
+<div class="grid grid-cols-2 gap-2">
+<button class="p-2.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-750 text-left transition-all hover:border-ai-500/40 group">
+<div class="flex items-center space-x-1.5 text-ai-400 mb-1">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-xs font-semibold text-slate-200 group-hover:text-ai-400">3 новых хука</span>
+</div>
+<p class="text-[10px] text-slate-400 leading-tight">Варианты первого предложения</p>
+</button>
+<button class="p-2.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-750 text-left transition-all hover:border-brand-500/40 group">
+<div class="flex items-center space-x-1.5 text-brand-400 mb-1">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-xs font-semibold text-slate-200 group-hover:text-brand-400">Сделай Punch</span>
+</div>
+<p class="text-[10px] text-slate-400 leading-tight">Усилить концовку и CTA</p>
+</button>
+<button class="p-2.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-750 text-left transition-all hover:border-amber-500/40 group">
+<div class="flex items-center space-x-1.5 text-amber-400 mb-1">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-xs font-semibold text-slate-200 group-hover:text-amber-400">Критика твита</span>
+</div>
+<p class="text-[10px] text-slate-400 leading-tight">Слабые места и клише</p>
+</button>
+<button class="p-2.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-750 text-left transition-all hover:border-emerald-500/40 group">
+<div class="flex items-center space-x-1.5 text-emerald-400 mb-1">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-xs font-semibold text-slate-200 group-hover:text-emerald-400">В тред (4 твита)</span>
+</div>
+<p class="text-[10px] text-slate-400 leading-tight">Развернуть идею подробно</p>
+</button>
+</div>
+</div>
+<!-- AI Dialogue & Suggestion Feed -->
+<div class="flex-1 overflow-y-auto p-3 space-y-3">
+<!-- AI Message Bubble -->
+<div class="space-y-1.5">
+<div class="flex items-center space-x-1.5 text-[11px] text-slate-400">
+<span class="w-1.5 h-1.5 rounded-full bg-ai-500"></span>
+<span class="font-medium text-ai-400">Анализ текущего хука:</span>
+</div>
+<div class="p-3 rounded-xl bg-surface-950 border border-surface-800 text-xs text-slate-300 leading-relaxed space-y-2">
+<p>Текущий хук использует сильный триггер упущенной выгоды (FOMO 90%).</p>
+<div class="p-2 rounded bg-surface-900 border border-surface-800 text-[11px] text-brand-300 font-mono">
+              💡 Альтернатива: «9 из 10 экспертов задают промпты неправильно. 3 формулы, меняющие результат:»
+            </div>
+<button class="w-full py-1 text-center text-[11px] font-semibold text-ai-400 hover:text-ai-300 bg-ai-500/10 hover:bg-ai-500/20 rounded transition-colors">
+              Заменить в редакторе
+            </button>
+</div>
+</div>
+</div>
+<!-- AI Prompt Input Box -->
+<div class="p-3 border-t border-surface-800 bg-surface-950/80">
+<form class="relative" onsubmit="event.preventDefault();">
+<textarea class="w-full pl-3 pr-9 py-2 text-xs bg-surface-900 border border-surface-750 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-ai-500 focus:ring-1 focus:ring-ai-500 resize-none transition-colors" placeholder="Своя инструкция AI (напр. «сделай тоньше сарказм»)..." rows="2"></textarea>
+<button class="absolute right-2 bottom-3 p-1.5 rounded-lg bg-ai-500 hover:bg-ai-600 text-white shadow-sm transition-colors" title="Отправить промпт" type="submit">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</form>
+</div>
+</aside>
+<!-- END: RightSidebar -->
+</div>
+<!-- END: ApplicationBody -->
+</body></html>
