@@ -688,18 +688,18 @@ export const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-surface-950">
       {/* Top Navbar */}
-      <header className="h-14 border-b border-surface-800 bg-surface-900/90 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0 select-none">
+      <header className="h-14 border-b border-surface-800 bg-surface-900/90 backdrop-blur-md pl-3 pr-4 flex items-center justify-between z-30 shrink-0 select-none">
         <div className="flex items-center">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-base">
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white shrink-0">
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden>
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-white tracking-tight text-sm">X Content Studio</span>
+            <div className="flex items-center gap-2 h-8">
+              <span className="font-bold text-white tracking-tight text-sm leading-none">X Content Studio</span>
               <span className="inline-flex items-center justify-center h-5 px-1.5 rounded text-[10px] font-bold uppercase tracking-wider leading-none bg-brand-500/10 text-brand-400 border border-brand-500/30">
-                <span className="translate-y-[1px]">PRO</span>
+                PRO
               </span>
             </div>
           </div>
@@ -790,7 +790,7 @@ export const App: React.FC = () => {
       {/* Main Workspace (3 columns) */}
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-80 border-r border-surface-800 bg-surface-900/60 flex flex-col shrink-0">
-          <div className="p-2.5 border-b border-surface-800/80 bg-surface-900/40">
+          <div className="px-3 py-2.5 border-b border-surface-800/80 bg-surface-900/40">
             <div className="flex items-center gap-1.5">
               <StudioSelect
                 aria-label="Фильтр по статусу"
