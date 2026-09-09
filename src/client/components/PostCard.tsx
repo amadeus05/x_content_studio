@@ -85,7 +85,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, isSelected, onSelect, 
       className={`p-3 rounded-xl cursor-pointer select-none relative group box-border border-2 transition-colors flex flex-col ${
         isSelected
           ? "bg-surface-850/90 border-brand-500/70 shadow-lg shadow-black/40"
-          : "bg-surface-900/90 border-transparent hover:border-surface-700/80 hover:bg-surface-850/50"
+          : "bg-surface-900/90 border-surface-800/90 hover:border-surface-700 hover:bg-surface-850/50"
       }`}
     >
       <div className="flex items-center justify-between text-[11px] mb-1.5 shrink-0 h-5">
