@@ -972,26 +972,26 @@ export const App: React.FC = () => {
                         }
                         title={
                           activeHook.pinnedBodyId === activeBody.id
-                            ? "Тело закреплено за этим хуком. Нажмите, чтобы отвязать."
-                            : "Закрепить это тело за текущим хуком по умолчанию."
+                            ? `Тело закреплено за «${activeHook.label}». Нажмите, чтобы отвязать.`
+                            : `Закрепить это тело за «${activeHook.label}» по умолчанию.`
                         }
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium border transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-medium border transition-all max-w-[18rem] ${
                           activeHook.pinnedBodyId === activeBody.id
                             ? "bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm"
                             : "bg-surface-950/60 border-surface-750 text-slate-400 hover:text-slate-200 hover:border-surface-600"
                         }`}
                       >
                         <Pin
-                          className={`size-3 rotate-45 ${
+                          className={`size-3 rotate-45 shrink-0 ${
                             activeHook.pinnedBodyId === activeBody.id
                               ? "fill-amber-300 text-amber-300"
                               : ""
                           }`}
                         />
-                        <span>
+                        <span className="truncate">
                           {activeHook.pinnedBodyId === activeBody.id
-                            ? "Закреплено за хуком 📌"
-                            : "Закрепить за хуком"}
+                            ? `Закреплено за «${activeHook.label}»`
+                            : `Закрепить за «${activeHook.label}»`}
                         </span>
                       </button>
                     )}
