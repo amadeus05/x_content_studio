@@ -626,9 +626,13 @@ export const App: React.FC = () => {
                   placeholder="Напишите провокационный хук, вопрос или интригующий факт..."
                   className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y"
                 />
-                <p className="text-[11px] text-slate-500 mt-1.5 flex items-center space-x-1">
-                  <Info className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>Совет: хук должен заставить нажать «Показать ещё» или открыть тред.</span>
+                <p className="mt-1.5 text-[11px] text-slate-500">
+                  <Info
+                    className="mr-1.5 inline-block size-[13px] align-[-2px] text-amber-400"
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                  Совет: хук должен заставить нажать «Показать ещё» или открыть тред.
                 </p>
               </div>
 

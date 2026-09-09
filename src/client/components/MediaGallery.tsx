@@ -300,8 +300,8 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
 
       {error && <div className="text-[11px] text-rose-400 mt-2">{error}</div>}
 
-      <p className="text-[11px] text-slate-500 mt-1.5 flex items-start space-x-1">
-        <Info className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-px" />
+      <p className="text-[11px] text-slate-500 mt-1.5 flex items-start gap-1.5 leading-snug">
+        <Info className="block w-3.5 h-3.5 text-amber-400 shrink-0 mt-px" aria-hidden />
         <span>
           {ownerType === "post"
             ? "Общие файлы поста — в превью всех вариантов, если у варианта нет своих."
