@@ -78,6 +78,51 @@ export const ContentTabs: React.FC<ContentTabsProps> = ({
     };
   }, []);
 
+  // Если активный таб обрезан краем — плавно доскроллить с учётом padding и border
+  useEffect(() => {
+    if (dragging) return;
+    const root = scrollerRef.current;
+    if (!root) return;
+    const tab = root.querySelector<HTMLElement>(`[data-tab-id="${CSS.escape(activeId)}"]`);
+    if (!tab) return;
+
+    const frame = requestAnimationFrame(() => {
+      const styles = getComputedStyle(root);
+      const padLeft = parseFloat(styles.paddingLeft) || 0;
+      const padRight = parseFloat(styles.paddingRight) || 0;
+      const borderLeft = parseFloat(styles.borderLeftWidth) || 0;
+      const borderRight = parseFloat(styles.borderRightWidth) || 0;
+
+      const rootRect = root.getBoundingClientRect();
+      const tabRect = tab.getBoundingClientRect();
+      const visibleLeft = rootRect.left + borderLeft + padLeft;
+      const visibleRight = rootRect.right - borderRight - padRight;
+
+      let delta = 0;
+      if (tabRect.left < visibleLeft - 0.5) {
+        delta = tabRect.left - visibleLeft;
+      } else if (tabRect.right > visibleRight + 0.5) {
+        delta = tabRect.right - visibleRight;
+      }
+
+      if (Math.abs(delta) < 0.5) return;
+
+      const targetLeft = Math.round(root.scrollLeft + delta);
+      root.scrollTo({ left: targetLeft, behavior: "smooth" });
+
+      let snapped = false;
+      const snap = () => {
+        if (snapped) return;
+        snapped = true;
+        root.scrollLeft = targetLeft;
+        root.removeEventListener("scrollend", snap);
+      };
+      root.addEventListener("scrollend", snap);
+      window.setTimeout(snap, 350);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeId, items.length, dragging]);
+
   const startEdit = (item: ContentTabItem) => {
     setEditingId(item.id);
     setLabelInput(item.label);
@@ -163,6 +208,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = ({
               return (
                 <div
                   key={item.id}
+                  data-tab-id={item.id}
                   className="flex items-center gap-1 px-3 py-1 rounded-md bg-surface-850 border border-surface-750 shrink-0"
                 >
                   <input
@@ -201,6 +247,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = ({
             return (
               <div
                 key={item.id}
+                data-tab-id={item.id}
                 role="button"
                 tabIndex={0}
                 onClick={() => handleSelect(item.id)}
