@@ -72,7 +72,8 @@ export const App: React.FC = () => {
   });
   const [isPlaybookOpen, setIsPlaybookOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hookSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bodySaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
   const [copiedField, setCopiedField] = useState<"hook" | "body" | null>(null);
   const [previewMedia, setPreviewMedia] = useState<PreviewMedia[]>([]);
@@ -197,7 +198,8 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (hookSaveTimerRef.current) clearTimeout(hookSaveTimerRef.current);
+      if (bodySaveTimerRef.current) clearTimeout(bodySaveTimerRef.current);
     };
   }, []);
 
@@ -418,8 +420,8 @@ export const App: React.FC = () => {
 
     const postId = selectedPost.id;
     const hookId = activeHook.id;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
+    if (hookSaveTimerRef.current) clearTimeout(hookSaveTimerRef.current);
+    hookSaveTimerRef.current = setTimeout(() => {
       ApiClient.updateHook(postId, hookId, { text: newHookText }).catch((err) => {
         console.error("Save hook error:", err);
       });
@@ -442,7 +444,7 @@ export const App: React.FC = () => {
 
     try {
       const updated = await ApiClient.pinBodyToHook(selectedPost.id, activeHook.id, bodyId);
-      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+      setPosts((current) => current.map((p) => (p.id === updated.id ? updated : p)));
       feedback.toast(
         "success",
         bodyId ? "Тело поста закреплено за данным хуком 📌" : "Закрепление тела снято"
@@ -464,7 +466,7 @@ export const App: React.FC = () => {
 
     try {
       const updated = await ApiClient.selectBody(selectedPost.id, bodyId);
-      setPosts(posts.map((p) => (p.id === updated.id ? updated : p)));
+      setPosts((current) => current.map((p) => (p.id === updated.id ? updated : p)));
     } catch (err: any) {
       console.error("Select body error:", err);
     }
@@ -552,8 +554,8 @@ export const App: React.FC = () => {
 
     const postId = selectedPost.id;
     const bodyId = activeBody.id;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
+    if (bodySaveTimerRef.current) clearTimeout(bodySaveTimerRef.current);
+    bodySaveTimerRef.current = setTimeout(() => {
       ApiClient.updateBody(postId, bodyId, { text: newBodyText }).catch((err) => {
         console.error("Save body error:", err);
       });

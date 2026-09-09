@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "d1:migrate:local": "wrangler d1 execute x-manager-db --local --file=./migrations/0001_initial_schema.sql && wrangler d1 execute x-manager-db --local --file=./migrations/0002_seed_playbook.sql && wrangler d1 execute x-manager-db --local --file=./migrations/0003_media.sql && wrangler d1 execute x-manager-db --local --file=./migrations/0004_post_bodies.sql",
-    "d1:migrate": "wrangler d1 execute x-manager-db --remote --file=./migrations/0001_initial_schema.sql && wrangler d1 execute x-manager-db --remote --file=./migrations/0002_seed_playbook.sql && wrangler d1 execute x-manager-db --remote --file=./migrations/0003_media.sql && wrangler d1 execute x-manager-db --remote --file=./migrations/0004_post_bodies.sql",
+    "d1:migrate:local": "node ./scripts/d1-migrate.mjs --local",
+    "d1:migrate": "node ./scripts/d1-migrate.mjs --remote",
     "deploy": "wrangler deploy"
   },
   "dependencies": {

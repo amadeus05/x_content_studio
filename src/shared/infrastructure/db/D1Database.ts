@@ -123,6 +123,7 @@ export class MemoryDatabaseAdapter implements IDatabase {
       id: samplePostId,
       status: "DRAFT",
       active_variant_id: sampleVariantId,
+      active_body_id: sampleBodyId,
       tags: JSON.stringify(["AI", "Продуктивность"]),
       notes: "Проверить гипотезу: формат списка инструментов получает на 40% больше закладок.",
       tweet_url: "",
@@ -204,11 +205,54 @@ export class MemoryDatabaseAdapter implements IDatabase {
     const lower = sql.toLowerCase().trim();
 
     if (lower.startsWith("insert into posts") || lower.startsWith("insert or replace into posts")) {
-      const [id, status, active_variant_id, tags, notes, tweet_url, metrics, scheduled_for, created_at, updated_at] = params as any[];
+      // Supports both legacy (10 fields) and new (11 with active_body_id) shapes
+      let id: string;
+      let status: string;
+      let active_variant_id: string;
+      let active_body_id: string | null;
+      let tags: string;
+      let notes: string;
+      let tweet_url: string;
+      let metrics: string;
+      let scheduled_for: string | null;
+      let created_at: string;
+      let updated_at: string;
+
+      if (params.length >= 11) {
+        [
+          id,
+          status,
+          active_variant_id,
+          active_body_id,
+          tags,
+          notes,
+          tweet_url,
+          metrics,
+          scheduled_for,
+          created_at,
+          updated_at
+        ] = params as any[];
+      } else {
+        [
+          id,
+          status,
+          active_variant_id,
+          tags,
+          notes,
+          tweet_url,
+          metrics,
+          scheduled_for,
+          created_at,
+          updated_at
+        ] = params as any[];
+        active_body_id = null;
+      }
+
       this.posts.set(id, {
         id,
         status,
         active_variant_id,
+        active_body_id,
         tags,
         notes,
         tweet_url,
