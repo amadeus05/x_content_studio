@@ -6,7 +6,8 @@ import {
   ExternalLink,
   Info,
   Check,
-  Pin
+  Pin,
+  LogOut
 } from "lucide-react";
 import { ApiClient } from "./services/ApiClient.ts";
 import type { AuthConfig } from "./services/ApiClient.ts";
@@ -824,11 +825,19 @@ export const App: React.FC = () => {
             )}
           </div>
 
-          <div className="p-2.5 border-t border-surface-800 bg-surface-950/60 flex items-center justify-between text-[11px] text-slate-500">
-            <span className="flex items-center space-x-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Синхронизировано с X</span>
-            </span>
+          <div className="px-3 py-2.5 border-t border-surface-800 bg-surface-950/60 flex items-center justify-between text-[11px] text-slate-500">
+            <button
+              type="button"
+              onClick={async () => {
+                await ApiClient.logout();
+                setAuthenticated(false);
+              }}
+              className="flex items-center gap-1.5 text-slate-500 hover:text-rose-300 transition-colors"
+              title="Выйти из аккаунта"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Выйти</span>
+            </button>
             <span className="font-mono text-[10px]">v1.0</span>
           </div>
         </aside>
