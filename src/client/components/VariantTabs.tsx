@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Plus, Trash2, Edit2, Check, Zap } from "lucide-react";
+import { Plus, Trash2, Edit2, Check, Zap, X } from "lucide-react";
 import { PostVariantDto } from "../../modules/content/application/dtos/PostDto.ts";
 
 interface VariantTabsProps {
@@ -115,17 +115,34 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
 
             if (editingId === v.id) {
               return (
-                <div key={v.id} className="flex items-center gap-1 px-2 py-1 rounded-md bg-surface-850 shrink-0">
+                <div key={v.id} className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-surface-850 border border-surface-750 shrink-0">
                   <input
                     type="text"
                     value={labelInput}
                     onChange={(e) => setLabelInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && saveEdit(v.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveEdit(v.id);
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
                     autoFocus
-                    className="bg-transparent text-xs text-white outline-none w-24 select-text"
+                    className="bg-transparent text-xs text-white outline-none w-24 select-text px-1"
                   />
-                  <button type="button" onClick={() => saveEdit(v.id)} className="text-emerald-400">
-                    <Check className="w-3.5 h-3.5" />
+                  <button
+                    type="button"
+                    title="Отмена"
+                    onClick={() => setEditingId(null)}
+                    className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-surface-800 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Сохранить название"
+                    onClick={() => saveEdit(v.id)}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-emerald-100 bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/40 shadow-sm transition-colors"
+                  >
+                    <Check className="w-3 h-3" />
+                    <span>Готово</span>
                   </button>
                 </div>
               );
@@ -143,7 +160,7 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
                     selectVariant(v.id);
                   }
                 }}
-                className={`group flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs shrink-0 cursor-pointer ${
+                className={`group flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md text-xs shrink-0 cursor-pointer ${
                   isActive
                     ? "font-semibold bg-brand-500 text-white shadow-sm"
                     : "font-medium text-slate-400 hover:text-slate-200 hover:bg-surface-850"
@@ -154,7 +171,7 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
                   {v.charCount} зн.
                 </span>
                 <span
-                  className={`inline-flex items-center gap-0.5 ${
+                  className={`inline-flex items-center gap-0.5 ml-0.5 ${
                     isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
@@ -165,9 +182,13 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
                       e.stopPropagation();
                       startEdit(v);
                     }}
-                    className={isActive ? "text-white/80 hover:text-amber-300" : "text-slate-500 hover:text-amber-300"}
+                    className={`p-[2px] rounded border transition-colors ${
+                      isActive
+                        ? "text-white/85 border-white/20 bg-white/10 hover:text-amber-300 hover:bg-amber-500/35 hover:border-amber-300/70"
+                        : "text-slate-400 border-surface-700/80 bg-surface-900/60 hover:text-amber-300 hover:border-amber-500/30 hover:bg-amber-500/10"
+                    }`}
                   >
-                    <Edit2 className="w-3 h-3" />
+                    <Edit2 className="w-2.5 h-2.5" />
                   </button>
                   {variants.length > 1 && (
                     <button
@@ -177,9 +198,13 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
                         e.stopPropagation();
                         onDeleteVariant(v.id);
                       }}
-                      className={isActive ? "text-white hover:text-rose-400" : "text-slate-400 hover:text-rose-400"}
+                      className={`p-[2px] rounded border transition-colors ${
+                        isActive
+                          ? "text-white/85 border-white/20 bg-white/10 hover:text-rose-100 hover:bg-rose-500/55 hover:border-rose-300/80"
+                          : "text-slate-400 border-surface-700/80 bg-surface-900/60 hover:text-rose-300 hover:border-rose-500/30 hover:bg-rose-500/10"
+                      }`}
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-2.5 h-2.5" />
                     </button>
                   )}
                 </span>
