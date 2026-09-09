@@ -282,6 +282,15 @@ export const App: React.FC = () => {
   // Удаление варианта
   const handleDeleteVariant = async (variantId: string) => {
     if (!selectedPost || selectedPost.variants.length <= 1) return;
+    const variant = selectedPost.variants.find((v) => v.id === variantId);
+    const ok = await feedback.confirm({
+      title: "Удалить вариант?",
+      message: variant?.label
+        ? `Вариант «${variant.label}» будет удалён без восстановления.`
+        : "Вариант будет удалён без восстановления.",
+      confirmLabel: "Удалить"
+    });
+    if (!ok) return;
     const previous = posts;
     const nextVariants = selectedPost.variants.filter((v) => v.id !== variantId);
     const nextActive = nextVariants.find((v) => v.id === selectedPost.activeVariantId) || nextVariants[0];
