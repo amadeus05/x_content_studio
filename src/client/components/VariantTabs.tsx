@@ -124,6 +124,7 @@ export const VariantTabs: React.FC<VariantTabsProps> = ({
                       if (e.key === "Enter") saveEdit(v.id);
                       if (e.key === "Escape") setEditingId(null);
                     }}
+                    onFocus={(e) => e.currentTarget.select()}
                     autoFocus
                     className="bg-transparent text-xs text-white outline-none w-24 select-text leading-none"
                   />
