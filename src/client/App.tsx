@@ -5,7 +5,8 @@ import {
   BookOpen,
   Settings,
   ExternalLink,
-  Info
+  Info,
+  Check
 } from "lucide-react";
 import { ApiClient } from "./services/ApiClient.ts";
 import type { AuthConfig } from "./services/ApiClient.ts";
@@ -23,6 +24,23 @@ import { StudioSelect } from "./components/StudioSelect.tsx";
 import { MediaGallery, PreviewMedia } from "./components/MediaGallery.tsx";
 import { useFeedback } from "./components/Feedback.tsx";
 import { LoginPage } from "./components/LoginPage.tsx";
+
+/** Copy glyph с ровным центром в viewBox (у Lucide Copy оптика уезжает влево-вверх). */
+const CopyGlyph: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    viewBox="0 0 16 16"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect x="5.25" y="5.25" width="7.5" height="7.5" rx="1.25" />
+    <path d="M3.5 10.5V4.25A1.25 1.25 0 0 1 4.75 3h6.25" />
+  </svg>
+);
 
 export const App: React.FC = () => {
   const feedback = useFeedback();
@@ -51,10 +69,26 @@ export const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const [copiedField, setCopiedField] = useState<"hook" | "body" | null>(null);
   const [previewMedia, setPreviewMedia] = useState<PreviewMedia[]>([]);
   const handlePreviewMedia = useCallback((items: PreviewMedia[]) => {
     setPreviewMedia(items);
   }, []);
+
+  const copyField = useCallback(async (field: "hook" | "body", text: string) => {
+    const value = text.trim();
+    if (!value) {
+      feedback.toast("info", "Нечего копировать — поле пустое");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      window.setTimeout(() => setCopiedField((cur) => (cur === field ? null : cur)), 1500);
+    } catch (err: any) {
+      feedback.error("Не удалось скопировать", err);
+    }
+  }, [feedback]);
 
   // User profile for preview
   const [userProfile, setUserProfile] = useState(() => {
@@ -613,11 +647,22 @@ export const App: React.FC = () => {
               />
 
               <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2 gap-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-brand-400">
                     1. Хук (первая строчка твита — захват внимания):
                   </label>
-                  <span className="text-[11px] font-mono text-slate-400">{[...activeVariant.hook].length} знака</span>
+                  <button
+                    type="button"
+                    title="Копировать хук"
+                    onClick={() => copyField("hook", activeVariant.hook)}
+                    className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-brand-300 hover:border-brand-500/40 hover:bg-brand-500/10 transition-colors shrink-0"
+                  >
+                    {copiedField === "hook" ? (
+                      <Check className="size-3 text-emerald-400" strokeWidth={2.5} />
+                    ) : (
+                      <CopyGlyph className="size-3.5" />
+                    )}
+                  </button>
                 </div>
                 <textarea
                   rows={2}
@@ -626,22 +671,38 @@ export const App: React.FC = () => {
                   placeholder="Напишите провокационный хук, вопрос или интригующий факт..."
                   className="w-full bg-surface-950/60 border border-surface-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-y"
                 />
-                <p className="mt-1.5 text-[11px] text-slate-500">
-                  <Info
-                    className="mr-1.5 inline-block size-[13px] align-[-2px] text-amber-400"
-                    strokeWidth={2}
-                    aria-hidden
-                  />
-                  Совет: хук должен заставить нажать «Показать ещё» или открыть тред.
-                </p>
+                <div className="mt-1.5 flex items-start justify-between gap-3">
+                  <p className="text-[11px] text-slate-500 min-w-0">
+                    <Info
+                      className="mr-1.5 inline-block size-[13px] align-[-2px] text-amber-400"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                    Совет: хук должен заставить нажать «Показать ещё» или открыть тред.
+                  </p>
+                  <span className="text-[11px] font-mono text-slate-400 shrink-0 pt-px">
+                    {[...activeVariant.hook].length} знака
+                  </span>
+                </div>
               </div>
 
               <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2 gap-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
                     2. Тело поста (раскрытие мысли или тред):
                   </label>
-                  <span className="text-[11px] font-mono text-slate-400">{[...activeVariant.body].length} знака</span>
+                  <button
+                    type="button"
+                    title="Копировать тело"
+                    onClick={() => copyField("body", activeVariant.body)}
+                    className="grid size-[22px] place-items-center rounded border border-surface-700/80 bg-surface-950/50 p-0 leading-none text-slate-400 hover:text-brand-300 hover:border-brand-500/40 hover:bg-brand-500/10 transition-colors shrink-0"
+                  >
+                    {copiedField === "body" ? (
+                      <Check className="size-3 text-emerald-400" strokeWidth={2.5} />
+                    ) : (
+                      <CopyGlyph className="size-3.5" />
+                    )}
+                  </button>
                 </div>
                 <textarea
                   ref={bodyRef}
@@ -688,7 +749,9 @@ export const App: React.FC = () => {
                       😀
                     </button>
                   </div>
-                  <span className="text-[11px] text-slate-500">Автосохранение</span>
+                  <span className="text-[11px] font-mono text-slate-400 shrink-0">
+                    {[...activeVariant.body].length} знака
+                  </span>
                 </div>
               </div>
 
