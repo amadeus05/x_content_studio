@@ -661,7 +661,7 @@ export const App: React.FC = () => {
               <div className="bg-surface-900 border border-surface-800 rounded-xl p-4 shadow-sm focus-within:border-brand-500/80 transition-all">
                 <div className="flex items-center justify-between mb-2 gap-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-brand-400">
-                    1. Хук (первая строчка твита — захват внимания):
+                    1. Хук (первая строчка твита):
                   </label>
                   <button
                     type="button"
