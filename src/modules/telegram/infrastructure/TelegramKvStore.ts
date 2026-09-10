@@ -1,4 +1,4 @@
-import type { ChatSession, ChatMessage } from "../domain/ChatSession.ts";
+import type { ChatSession, ChatMessage, ConversationContext } from "../domain/ChatSession.ts";
 import { CHAT_HISTORY_LIMIT, DEFAULT_BOT_MODEL_ID } from "../domain/ChatSession.ts";
 
 // Минимальный тип KV для совместимости с Cloudflare KV и MemoryKV
@@ -29,7 +29,10 @@ export class TelegramKvStore {
     const raw = await this.kv.get(`bot_session:${chatId}`);
     if (raw) {
       try {
-        return JSON.parse(raw) as ChatSession;
+        const parsed = JSON.parse(raw) as ChatSession;
+        // Backward compat: старые сессии без context
+        if (!parsed.context) parsed.context = {};
+        return parsed;
       } catch {
         // fall through to default
       }
@@ -44,6 +47,14 @@ export class TelegramKvStore {
       // Сессия живёт 30 дней без активности
       expirationTtl: 30 * 24 * 60 * 60
     });
+  }
+
+  /** Частичное обновление ConversationContext без перезаписи всей сессии */
+  public async updateContext(chatId: number, patch: Partial<ConversationContext>): Promise<void> {
+    const session = await this.getSession(chatId);
+    session.context = { ...session.context, ...patch };
+    session.updatedAt = new Date().toISOString();
+    await this.saveSession(session);
   }
 
   public async setModel(chatId: number, modelId: string): Promise<void> {
@@ -92,6 +103,7 @@ export class TelegramKvStore {
       chatId,
       modelId: DEFAULT_BOT_MODEL_ID,
       history: [],
+      context: {},
       updatedAt: new Date().toISOString()
     };
   }

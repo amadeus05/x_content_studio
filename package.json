@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "d1:migrate:local": "node ./scripts/d1-migrate.mjs --local",
     "d1:migrate": "node ./scripts/d1-migrate.mjs --remote",
     "deploy": "wrangler deploy"
@@ -24,6 +26,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.7.3",
     "vite": "^6.2.0",
+    "vitest": "^4.1.11",
     "wrangler": "^3.111.0"
   }
 }

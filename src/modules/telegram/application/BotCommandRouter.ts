@@ -3,6 +3,7 @@ import type { TelegramApiClient } from "../infrastructure/TelegramApiClient.ts";
 import type { ChatWithAiUseCase } from "./use-cases/ChatWithAiUseCase.ts";
 import type { CreatePostViaBotUseCase } from "./use-cases/CreatePostViaBotUseCase.ts";
 import type { FindPostViaBotUseCase } from "./use-cases/FindPostViaBotUseCase.ts";
+import type { ConversationOrchestrator } from "./ConversationOrchestrator.ts";
 import { listSelectableModels, type AiModel } from "../../ai-copilot/domain/aiModels.ts";
 
 // ─── Telegram Update Types ──────────────────────────────────────────────────
@@ -42,6 +43,8 @@ export interface BotContext {
   chatWithAi: ChatWithAiUseCase;
   createPost: CreatePostViaBotUseCase;
   findPost: FindPostViaBotUseCase;
+  /** Conversational orchestrator — обрабатывает свободный текст */
+  orchestrator: ConversationOrchestrator;
   /** ID из TELEGRAM_ALLOWED_IDS (null = открытый доступ) */
   allowedUserIds: number[] | null;
 }
@@ -103,7 +106,8 @@ export class BotCommandRouter {
           "❓ Неизвестная команда. Напиши /start чтобы увидеть список команд."
         );
       } else if (text) {
-        await this.handleChat(chatId, text);
+        // Свободный текст → ConversationOrchestrator (natural language routing)
+        await this.handleOrchestrated(chatId, text);
       }
     } catch (err: any) {
       console.error("[BotCommandRouter] Unhandled error:", err);
@@ -246,6 +250,22 @@ export class BotCommandRouter {
         chatId,
         `❌ Ошибка поиска: ${escMd(err.message || "Неизвестная ошибка")}`,
         { parse_mode: "MarkdownV2" }
+      );
+    }
+  }
+
+  private async handleOrchestrated(chatId: number, text: string): Promise<void> {
+    await this.ctx.tgApi.sendTyping(chatId);
+    try {
+      const reply = await this.ctx.orchestrator.handle(chatId, text);
+      if (reply) {
+        await this.ctx.tgApi.sendMessage(chatId, reply, { parse_mode: "MarkdownV2" });
+      }
+    } catch (err: any) {
+      console.error("[Bot] orchestrator error:", err);
+      await this.ctx.tgApi.sendMessage(
+        chatId,
+        `❌ Ошибка: ${err.message || "Не удалось обработать сообщение"}`
       );
     }
   }

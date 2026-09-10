@@ -6,6 +6,7 @@ import { BotCommandRouter } from "../../modules/telegram/application/BotCommandR
 import { ChatWithAiUseCase } from "../../modules/telegram/application/use-cases/ChatWithAiUseCase.ts";
 import { CreatePostViaBotUseCase } from "../../modules/telegram/application/use-cases/CreatePostViaBotUseCase.ts";
 import { FindPostViaBotUseCase } from "../../modules/telegram/application/use-cases/FindPostViaBotUseCase.ts";
+import { ConversationOrchestrator } from "../../modules/telegram/application/ConversationOrchestrator.ts";
 import { AiOrchestrator } from "../../modules/ai-copilot/infrastructure/AiOrchestrator.ts";
 import { D1PostRepository } from "../../modules/content/infrastructure/D1PostRepository.ts";
 import { CloudflareD1Adapter, MemoryDatabaseAdapter } from "../../shared/infrastructure/db/D1Database.ts";
@@ -77,6 +78,14 @@ export async function handleTelegramWebhook(c: Context<{ Bindings: Bindings }>):
   const allowedRaw = env?.TELEGRAM_ALLOWED_IDS || processEnv.TELEGRAM_ALLOWED_IDS;
   const allowedUserIds = parseAllowedIds(allowedRaw);
 
+  // Orchestrator (conversational layer)
+  const orchestrator = new ConversationOrchestrator({
+    kvStore,
+    tgApi,
+    aiService: aiOrchestrator,
+    postRepo
+  });
+
   // Router
   const router = new BotCommandRouter({
     kvStore,
@@ -84,6 +93,7 @@ export async function handleTelegramWebhook(c: Context<{ Bindings: Bindings }>):
     chatWithAi,
     createPost,
     findPost,
+    orchestrator,
     allowedUserIds
   });
 
