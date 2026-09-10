@@ -197,7 +197,10 @@ export class IntentParser {
   private buildContextHint(ctx: ConversationContext): string {
     const parts: string[] = [];
     if (ctx.postId) parts.push(`активный пост: ${ctx.postId}`);
-    if (ctx.variantId) parts.push(`активный вариант: ${ctx.variantId}`);
+    const hookId = ctx.activeHookId || ctx.variantId;
+    if (hookId) parts.push(`активный хук: ${hookId}`);
+    const bodyId = ctx.activeBodyId || ctx.versionId;
+    if (bodyId) parts.push(`активное тело: ${bodyId}`);
     if (ctx.variantCount) parts.push(`доступно вариантов: ${ctx.variantCount}`);
     if (ctx.intent) parts.push(`предыдущий intent: ${ctx.intent}`);
     return parts.join(", ");

@@ -40,7 +40,7 @@ function emptyContext(): ConversationContext {
 function contextWithVariants(count: number): ConversationContext {
   return {
     postId: "post-abc-123",
-    variantId: "hook-001",
+    activeHookId: "hook-001",
     variantCount: count,
     intent: "content.create"
   };
@@ -49,8 +49,8 @@ function contextWithVariants(count: number): ConversationContext {
 function contextWithActiveVariant(): ConversationContext {
   return {
     postId: "post-abc-123",
-    variantId: "hook-001",
-    versionId: "body-001",
+    activeHookId: "hook-001",
+    activeBodyId: "body-001",
     intent: "content.select_variant"
   };
 }

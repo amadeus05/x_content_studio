@@ -15,12 +15,16 @@ export interface ConversationContext {
   intent?: string;
   /** ID активного поста */
   postId?: string;
-  /** ID активного варианта (hookId или variantId) */
-  variantId?: string;
-  /** ID активной версии (bodyId) */
-  versionId?: string;
-  /** Количество вариантов в последней генерации */
+  /** ID активного хука */
+  activeHookId?: string;
+  /** ID активного тела поста */
+  activeBodyId?: string;
+  /** Количество вариантов в последней генерации (UI hint, не источник истины) */
   variantCount?: number;
+  /** @deprecated Временный алиас для совместимости с ранее сохранёнными сессиями */
+  variantId?: string;
+  /** @deprecated Временный алиас для совместимости с ранее сохранёнными сессиями */
+  versionId?: string;
 }
 
 /** Состояние сессии пользователя в боте */
