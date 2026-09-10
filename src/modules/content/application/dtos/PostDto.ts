@@ -1,5 +1,6 @@
 import { Post } from "../../domain/entities/Post.ts";
 import { PostVariant } from "../../domain/entities/PostVariant.ts";
+import { PostVersion } from "../../domain/entities/PostVersion.ts";
 import { PostHook } from "../../domain/entities/PostHook.ts";
 import { PostBody } from "../../domain/entities/PostBody.ts";
 
@@ -26,16 +27,30 @@ export interface PostBodyDto {
   updatedAt: string;
 }
 
-export interface PostVariantDto {
+export interface PostVersionDto {
   id: string;
-  postId: string;
+  variantId: string;
+  versionNumber: number;
   hook: string;
   body: string;
   fullText: string;
-  variantLabel: string;
+  createdAt: string;
+  actionMetadata?: string | null;
+}
+
+export interface PostVariantDto {
+  id: string;
+  postId: string;
   label?: string;
-  pinnedBodyId?: string | null;
+  variantLabel: string;
   orderIndex: number;
+  activeVersionId?: string;
+  versions?: PostVersionDto[];
+  activeVersion?: PostVersionDto;
+  hook: string;
+  body: string;
+  fullText: string;
+  pinnedBodyId?: string | null;
   charCount: number;
   remainingChars: number;
   isOverLimit: boolean;
@@ -101,20 +116,38 @@ export class PostMapper {
     };
   }
 
+  public static toVersionDto(version: PostVersion): PostVersionDto {
+    return {
+      id: version.id,
+      variantId: version.variantId,
+      versionNumber: version.versionNumber,
+      hook: version.hook,
+      body: version.body,
+      fullText: version.getFullText(),
+      createdAt: version.createdAt.toISOString(),
+      actionMetadata: version.actionMetadata ?? null
+    };
+  }
+
   public static toVariantDto(variant: PostVariant): PostVariantDto {
     const tweetContent = variant.getTweetContent();
     const countInfo = tweetContent.getCountInfo();
+    const versionsDto = variant.getVersions().map(PostMapper.toVersionDto);
+    const activeVersion = variant.getActiveVersion();
 
     return {
       id: variant.id,
       postId: variant.postId,
+      label: variant.label,
+      variantLabel: variant.label,
+      orderIndex: variant.orderIndex,
+      activeVersionId: variant.activeVersionId,
+      versions: versionsDto,
+      activeVersion: activeVersion ? PostMapper.toVersionDto(activeVersion) : versionsDto[0],
       hook: variant.hook,
       body: variant.body,
       fullText: variant.getFullText(),
-      variantLabel: variant.variantLabel,
-      label: variant.variantLabel,
       pinnedBodyId: variant.pinnedBodyId ?? null,
-      orderIndex: variant.orderIndex,
       charCount: countInfo.totalChars,
       remainingChars: countInfo.remainingChars,
       isOverLimit: countInfo.isOverLimit,

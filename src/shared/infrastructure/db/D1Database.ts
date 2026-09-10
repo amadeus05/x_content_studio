@@ -55,6 +55,7 @@ export class MemoryDatabaseAdapter implements IDatabase {
   private static instance: MemoryDatabaseAdapter;
   private posts: Map<string, any> = new Map();
   private variants: Map<string, any> = new Map();
+  private versions: Map<string, any> = new Map();
   private bodies: Map<string, any> = new Map();
   private methodologies: Map<string, any> = new Map();
   private toneProfiles: Map<string, any> = new Map();
@@ -146,13 +147,26 @@ export class MemoryDatabaseAdapter implements IDatabase {
     this.variants.set(sampleVariantId, {
       id: sampleVariantId,
       post_id: samplePostId,
+      label: "Вариант 1 (Провокация)",
+      variant_label: "Вариант 1 (Провокация)",
+      active_version_id: "sample-version-1",
       hook: "Большинство людей используют ChatGPT как продвинутый Google и упускают 90% его силы.",
       body: "Вот 3 системных промпта, которые превращают AI в персонального редактора:\n\n1. Ролевой контекст\n2. Ограничение по ToV\n3. Запрет на штампы\n\nСохраняйте в закладки 🔖",
-      variant_label: "Вариант 1 (Провокация)",
       pinned_body_id: sampleBodyId,
       order_index: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
+    });
+
+    const sampleVersionId = "sample-version-1";
+    this.versions.set(sampleVersionId, {
+      id: sampleVersionId,
+      variant_id: sampleVariantId,
+      version_number: 1,
+      hook: "Большинство людей используют ChatGPT как продвинутый Google и упускают 90% его силы.",
+      body: "Вот 3 системных промпта, которые превращают AI в персонального редактора:\n\n1. Ролевой контекст\n2. Ограничение по ToV\n3. Запрет на штампы\n\nСохраняйте в закладки 🔖",
+      created_at: new Date().toISOString(),
+      action_metadata: "seed"
     });
   }
 
@@ -183,6 +197,15 @@ export class MemoryDatabaseAdapter implements IDatabase {
         return filtered as unknown as T[];
       }
       return Array.from(this.variants.values()) as unknown as T[];
+    }
+
+    if (lower.startsWith("select * from post_versions") || lower.includes("from post_versions")) {
+      if (lower.includes("where variant_id =")) {
+        const variantId = params[0] as string;
+        const filtered = Array.from(this.versions.values()).filter((v) => v.variant_id === variantId);
+        return filtered as unknown as T[];
+      }
+      return Array.from(this.versions.values()) as unknown as T[];
     }
 
     if (lower.startsWith("select * from post_bodies") || lower.includes("from post_bodies")) {
@@ -265,17 +288,67 @@ export class MemoryDatabaseAdapter implements IDatabase {
     }
 
     if (lower.startsWith("insert into post_variants") || lower.startsWith("insert or replace into post_variants")) {
-      const [id, post_id, hook, body, variant_label, order_index, created_at, updated_at, pinned_body_id] = params as any[];
-      this.variants.set(id, {
+      if (params.length >= 11) {
+        const [id, post_id, label, variant_label, order_index, active_version_id, hook, body, pinned_body_id, created_at, updated_at] = params as any[];
+        const prev = this.variants.get(id) || {};
+        this.variants.set(id, {
+          ...prev,
+          id,
+          post_id,
+          label: label || variant_label || "Вариант",
+          variant_label: variant_label || label || "Вариант",
+          order_index: order_index ?? 0,
+          active_version_id: active_version_id || null,
+          hook: hook || "",
+          body: body || "",
+          pinned_body_id: pinned_body_id ?? null,
+          created_at: created_at || new Date().toISOString(),
+          updated_at: updated_at || new Date().toISOString()
+        });
+      } else if (params.length === 7) {
+        const [id, post_id, label, order_index, active_version_id, created_at, updated_at] = params as any[];
+        const prev = this.variants.get(id) || {};
+        this.variants.set(id, {
+          ...prev,
+          id,
+          post_id,
+          label,
+          variant_label: label,
+          order_index,
+          active_version_id,
+          created_at,
+          updated_at
+        });
+      } else {
+        const [id, post_id, hook, body, variant_label, order_index, created_at, updated_at, pinned_body_id] = params as any[];
+        const prev = this.variants.get(id) || {};
+        this.variants.set(id, {
+          ...prev,
+          id,
+          post_id,
+          hook,
+          body,
+          label: variant_label,
+          variant_label,
+          order_index,
+          created_at,
+          updated_at,
+          pinned_body_id: pinned_body_id ?? null
+        });
+      }
+      return { success: true, changes: 1 };
+    }
+
+    if (lower.startsWith("insert into post_versions") || lower.startsWith("insert or replace into post_versions")) {
+      const [id, variant_id, version_number, hook, body, created_at, action_metadata] = params as any[];
+      this.versions.set(id, {
         id,
-        post_id,
+        variant_id,
+        version_number,
         hook,
         body,
-        variant_label,
-        order_index,
         created_at,
-        updated_at,
-        pinned_body_id: pinned_body_id ?? null
+        action_metadata: action_metadata ?? null
       });
       return { success: true, changes: 1 };
     }
@@ -354,7 +427,20 @@ export class MemoryDatabaseAdapter implements IDatabase {
     if (lower.startsWith("delete from post_variants where post_id =")) {
       const postId = params[0] as string;
       for (const [vid, v] of this.variants.entries()) {
-        if (v.post_id === postId) this.variants.delete(vid);
+        if (v.post_id === postId) {
+          this.variants.delete(vid);
+          for (const [verId, ver] of this.versions.entries()) {
+            if (ver.variant_id === vid) this.versions.delete(verId);
+          }
+        }
+      }
+      return { success: true, changes: 1 };
+    }
+
+    if (lower.startsWith("delete from post_versions where variant_id =")) {
+      const variantId = params[0] as string;
+      for (const [verId, ver] of this.versions.entries()) {
+        if (ver.variant_id === variantId) this.versions.delete(verId);
       }
       return { success: true, changes: 1 };
     }

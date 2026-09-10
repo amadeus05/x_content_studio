@@ -74,9 +74,8 @@ export class ActionExecutor {
           contextUpdate: {
             taskId: data.post.id,
             postId: data.post.id,
-            activeHookId: data.post.activeHookId,
-            activeBodyId: data.post.activeBodyId,
-            variantCount: data.variants.length,
+            variantId: data.activeVariantId,
+            versionId: data.activeVersionId,
             intent: "content.create"
           }
         };
@@ -89,6 +88,7 @@ export class ActionExecutor {
 
         const res = await this.useCases.editContent.execute({
           postId: context.postId,
+          variantId: context.variantId,
           instruction: intent.parameters.instruction,
           modelId
         });
@@ -99,8 +99,11 @@ export class ActionExecutor {
 
         const data = res.getValue();
         return {
-          reply: this.presenter.formatEdited(data.updatedHook, data.updatedBody),
+          reply: this.presenter.formatEdited(data.hook, data.body, data.versionNumber),
           contextUpdate: {
+            postId: data.postId,
+            variantId: data.variantId,
+            versionId: data.versionId,
             intent: "content.edit"
           }
         };
@@ -113,6 +116,7 @@ export class ActionExecutor {
 
         const res = await this.useCases.regenerateContent.execute({
           postId: context.postId,
+          variantId: context.variantId,
           instruction: intent.parameters.instruction,
           modelId
         });
@@ -123,8 +127,11 @@ export class ActionExecutor {
 
         const data = res.getValue();
         return {
-          reply: this.presenter.formatRegenerated(data.hook, data.body),
+          reply: this.presenter.formatRegenerated(data.hook, data.body, data.versionNumber),
           contextUpdate: {
+            postId: data.postId,
+            variantId: data.variantId,
+            versionId: data.versionId,
             intent: "content.regenerate"
           }
         };
@@ -152,8 +159,9 @@ export class ActionExecutor {
             data.selectedBody
           ),
           contextUpdate: {
-            activeHookId: data.activeHookId,
-            activeBodyId: data.activeBodyId,
+            postId: data.post.id,
+            variantId: data.variantId,
+            versionId: data.versionId,
             intent: "content.select_variant"
           }
         };

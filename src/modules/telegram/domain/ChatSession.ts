@@ -11,20 +11,14 @@ export type ChatMessage = {
 export interface ConversationContext {
   /** ID задачи создания (PostId последнего созданного поста) */
   taskId?: string;
-  /** Последний определённый intent */
-  intent?: string;
   /** ID активного поста */
   postId?: string;
-  /** ID активного хука */
-  activeHookId?: string;
-  /** ID активного тела поста */
-  activeBodyId?: string;
-  /** Количество вариантов в последней генерации (UI hint, не источник истины) */
-  variantCount?: number;
-  /** @deprecated Временный алиас для совместимости с ранее сохранёнными сессиями */
+  /** ID активного варианта */
   variantId?: string;
-  /** @deprecated Временный алиас для совместимости с ранее сохранёнными сессиями */
+  /** ID активной версии */
   versionId?: string;
+  /** Последний определённый intent */
+  intent?: string;
 }
 
 /** Состояние сессии пользователя в боте */

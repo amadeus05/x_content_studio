@@ -44,7 +44,9 @@ describe("ActionExecutor Dispatcher", () => {
             variants: [
               { hook: "Hook 1", body: "Body 1" },
               { hook: "Hook 2", body: "Body 2" }
-            ]
+            ],
+            activeVariantId: "var-1",
+            activeVersionId: "ver-1"
           })
         )
       } as any,
@@ -52,8 +54,12 @@ describe("ActionExecutor Dispatcher", () => {
         execute: vi.fn().mockResolvedValue(
           Result.ok({
             post: samplePostDto,
-            updatedHook: "Edited Hook Text",
-            updatedBody: "Edited Body Text"
+            postId: "post-123",
+            variantId: "var-1",
+            versionId: "ver-2",
+            versionNumber: 2,
+            hook: "Edited Hook Text",
+            body: "Edited Body Text"
           })
         )
       } as any,
@@ -61,6 +67,10 @@ describe("ActionExecutor Dispatcher", () => {
         execute: vi.fn().mockResolvedValue(
           Result.ok({
             post: samplePostDto,
+            postId: "post-123",
+            variantId: "var-1",
+            versionId: "ver-3",
+            versionNumber: 3,
             hook: "Regen Hook Text",
             body: "Regen Body Text"
           })
@@ -71,10 +81,12 @@ describe("ActionExecutor Dispatcher", () => {
           Result.ok({
             post: samplePostDto,
             variantNumber: 2,
+            variantId: "var-2",
+            versionId: "ver-1",
             selectedHook: "Hook 2",
             selectedBody: "Body 2",
-            activeHookId: "hook-2",
-            activeBodyId: "body-2"
+            hook: "Hook 2",
+            body: "Body 2"
           })
         )
       } as any
@@ -109,9 +121,8 @@ describe("ActionExecutor Dispatcher", () => {
     expect(result.reply).toContain("Создан пост на тему");
     expect(result.reply).toContain("Hook 1");
     expect(result.contextUpdate?.postId).toBe("post-123");
-    expect(result.contextUpdate?.activeHookId).toBe("hook-1");
-    expect(result.contextUpdate?.activeBodyId).toBe("body-1");
-    expect(result.contextUpdate?.variantCount).toBe(2);
+    expect(result.contextUpdate?.variantId).toBe("var-1");
+    expect(result.contextUpdate?.versionId).toBe("ver-1");
     expect(result.contextUpdate?.intent).toBe("content.create");
   });
 
@@ -121,18 +132,21 @@ describe("ActionExecutor Dispatcher", () => {
       action: "content.edit",
       parameters: { instruction: "make it punchier" }
     };
-    const context: ConversationContext = { postId: "post-123", activeHookId: "hook-1" };
+    const context: ConversationContext = { postId: "post-123", variantId: "var-1" };
 
     const result = await executor.execute(intent, context, "gemini-3.8-flash");
 
     expect(mockUseCases.editContent.execute).toHaveBeenCalledWith({
       postId: "post-123",
+      variantId: "var-1",
       instruction: "make it punchier",
       modelId: "gemini-3.8-flash"
     });
 
     expect(result.reply).toContain("Вариант обновлён");
     expect(result.reply).toContain("Edited Hook Text");
+    expect(result.contextUpdate?.variantId).toBe("var-1");
+    expect(result.contextUpdate?.versionId).toBe("ver-2");
     expect(result.contextUpdate?.intent).toBe("content.edit");
   });
 
@@ -153,18 +167,21 @@ describe("ActionExecutor Dispatcher", () => {
       action: "content.regenerate",
       parameters: { instruction: "try something different" }
     };
-    const context: ConversationContext = { postId: "post-123" };
+    const context: ConversationContext = { postId: "post-123", variantId: "var-1" };
 
     const result = await executor.execute(intent, context, "gemini-3.8-flash");
 
     expect(mockUseCases.regenerateContent.execute).toHaveBeenCalledWith({
       postId: "post-123",
+      variantId: "var-1",
       instruction: "try something different",
       modelId: "gemini-3.8-flash"
     });
 
     expect(result.reply).toContain("Вариант перегенерирован");
     expect(result.reply).toContain("Regen Hook Text");
+    expect(result.contextUpdate?.variantId).toBe("var-1");
+    expect(result.contextUpdate?.versionId).toBe("ver-3");
     expect(result.contextUpdate?.intent).toBe("content.regenerate");
   });
 
@@ -176,7 +193,7 @@ describe("ActionExecutor Dispatcher", () => {
     };
     const context: ConversationContext = {
       postId: "post-123",
-      variantCount: 2
+      variantId: "var-1"
     };
 
     const result = await executor.execute(intent, context, "gemini-3.8-flash");
@@ -187,13 +204,13 @@ describe("ActionExecutor Dispatcher", () => {
     });
 
     expect(result.reply).toContain("Выбран вариант *2*");
-    expect(result.contextUpdate?.activeHookId).toBe("hook-2");
-    expect(result.contextUpdate?.activeBodyId).toBe("body-2");
+    expect(result.contextUpdate?.variantId).toBe("var-2");
+    expect(result.contextUpdate?.versionId).toBe("ver-1");
     expect(result.contextUpdate?.intent).toBe("content.select_variant");
   });
 
-  // 7. Selecting non-existing variant fails even if context.variantCount is incorrect
-  it("7. Selecting non-existing variant fails even if context.variantCount is incorrect", async () => {
+  // 7. Selecting non-existing variant fails even if context is provided
+  it("7. Selecting non-existing variant fails when use case fails", async () => {
     // Mock the usecase failing because the real post object does not contain variant #5
     (mockUseCases.selectVariant.execute as any).mockResolvedValueOnce(
       Result.fail("Вариант 5 не существует. Доступно: 2 вариантов.")
@@ -203,15 +220,12 @@ describe("ActionExecutor Dispatcher", () => {
       action: "content.select_variant",
       parameters: { variantNumber: 5 }
     };
-    // Context erroneously says 10 variants exist
     const context: ConversationContext = {
-      postId: "post-123",
-      variantCount: 10
+      postId: "post-123"
     };
 
     const result = await executor.execute(intent, context, "gemini-3.8-flash");
 
-    // ActionExecutor delegates to use case and presents error
     expect(mockUseCases.selectVariant.execute).toHaveBeenCalledWith({
       postId: "post-123",
       variantNumber: 5

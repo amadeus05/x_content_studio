@@ -5,12 +5,17 @@ import { ContentAiGenerator } from "../services/ContentAiGenerator.ts";
 
 export interface RegenerateContentRequest {
   postId: string;
+  variantId?: string;
   instruction?: string;
   modelId?: string;
 }
 
 export interface RegenerateContentResponse {
   post: PostDto;
+  postId: string;
+  variantId: string;
+  versionId: string;
+  versionNumber: number;
   hook: string;
   body: string;
 }
@@ -22,37 +27,55 @@ export class RegenerateContentUseCase {
   ) {}
 
   public async execute(req: RegenerateContentRequest): Promise<Result<RegenerateContentResponse>> {
+    // 1. Load Post
     const post = await this.postRepository.findById(req.postId);
     if (!post) {
       return Result.fail("Активный пост не найден.");
     }
 
-    const topic = post.notes || "контент";
+    // 2. Load target / active Variant
+    const targetVariantId = req.variantId || post.activeVariantId;
+    const variant = targetVariantId ? post.getVariantById(targetVariantId) : post.getActiveVariant();
 
+    if (!variant) {
+      return Result.fail("Активный вариант не найден.");
+    }
+
+    const topic = post.notes || variant.hook || "контент";
+
+    // 3. Generate new content via AI
     const { hook, body } = await this.aiGenerator.regenerateContent({
       topic,
       instruction: req.instruction,
       modelId: req.modelId
     });
 
-    const activeHook = post.getActiveHook();
-    const activeBody = post.getActiveBody();
+    // 4. Create new Version on the variant without mutating/deleting previous versions
+    const versionRes = variant.addVersion(
+      hook,
+      body,
+      req.instruction ? `regenerate: ${req.instruction}` : "regenerate"
+    );
 
-    // TODO: Will become immutable version creation in next versioning migration.
-    // Currently mutating active hook/body until PostVersion entity is introduced.
-    if (activeHook) {
-      post.updateHook(activeHook.id, hook);
+    if (versionRes.isFailure) {
+      return Result.fail(versionRes.getError());
     }
-    if (activeBody) {
-      post.updateBody(activeBody.id, body);
-    }
+
+    const newVersion = versionRes.getValue();
+
+    // Ensure variant is active on post
+    post.selectVariant(variant.id);
 
     await this.postRepository.save(post);
 
     return Result.ok({
       post: PostMapper.toDto(post),
-      hook,
-      body
+      postId: post.id,
+      variantId: variant.id,
+      versionId: newVersion.id,
+      versionNumber: newVersion.versionNumber,
+      hook: newVersion.hook,
+      body: newVersion.body
     });
   }
 }

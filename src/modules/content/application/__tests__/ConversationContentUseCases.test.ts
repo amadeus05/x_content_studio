@@ -198,10 +198,10 @@ describe("Conversation Content Use Cases & Validation", () => {
       expect(res.isSuccess).toBe(true);
       const data = res.getValue();
       expect(data.variantNumber).toBe(2);
-      expect(data.activeHookId).toBeTruthy();
+      expect(data.variantId).toBeTruthy();
 
       const post = await postRepo.findById(created.post.id);
-      expect(post?.activeHookId).toBe(data.activeHookId);
+      expect(post?.activeVariantId).toBe(data.variantId);
     });
 
     it("fails when selecting non-existing variant number (> real hooks count)", async () => {

@@ -37,11 +37,10 @@ function emptyContext(): ConversationContext {
   return {};
 }
 
-function contextWithVariants(count: number): ConversationContext {
+function contextWithVariants(): ConversationContext {
   return {
     postId: "post-abc-123",
-    activeHookId: "hook-001",
-    variantCount: count,
+    variantId: "var-001",
     intent: "content.create"
   };
 }
@@ -49,8 +48,8 @@ function contextWithVariants(count: number): ConversationContext {
 function contextWithActiveVariant(): ConversationContext {
   return {
     postId: "post-abc-123",
-    activeHookId: "hook-001",
-    activeBodyId: "body-001",
+    variantId: "var-001",
+    versionId: "ver-001",
     intent: "content.select_variant"
   };
 }
@@ -98,7 +97,7 @@ describe("IntentParser", () => {
       parameters: { variantNumber: 3 }
     }));
     const parser = new IntentParser(ai);
-    const intent = await parser.parse("Третий", contextWithVariants(5), MODEL_ID);
+    const intent = await parser.parse("Третий", contextWithVariants(), MODEL_ID);
 
     expect(intent.action).toBe("content.select_variant");
     if (intent.action === "content.select_variant") {

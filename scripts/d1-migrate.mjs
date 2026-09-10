@@ -85,4 +85,9 @@ ensureColumn("posts", "active_body_id", "TEXT");
 
 execFile("migrations/0004_post_bodies.sql");
 
+ensureColumn("post_variants", "active_version_id", "TEXT");
+ensureColumn("post_variants", "label", "TEXT");
+
+execFile("migrations/0005_post_versions.sql");
+
 console.log("Migrations complete.");

@@ -52,17 +52,19 @@ export class TelegramContentPresenter {
   /**
    * Formats the response for content.edit.
    */
-  public formatEdited(hook: string, body: string): string {
+  public formatEdited(hook: string, body: string, versionNumber?: number): string {
     const esc = (t: string) => this.escapeMarkdown(t);
-    return `✅ Вариант обновлён:\n\n${esc(hook)}\n\n${esc(body.slice(0, 300))}${body.length > 300 ? "…" : ""}`;
+    const versionHeader = versionNumber && versionNumber > 1 ? ` (Версия ${versionNumber})` : "";
+    return `✅ Вариант обновлён${versionHeader}:\n\n${esc(hook)}\n\n${esc(body.slice(0, 300))}${body.length > 300 ? "…" : ""}`;
   }
 
   /**
    * Formats the response for content.regenerate.
    */
-  public formatRegenerated(hook: string, body: string): string {
+  public formatRegenerated(hook: string, body: string, versionNumber?: number): string {
     const esc = (t: string) => this.escapeMarkdown(t);
-    return `🔄 Вариант перегенерирован:\n\n*${esc(hook)}*\n\n${esc(body.slice(0, 300))}${body.length > 300 ? "…" : ""}`;
+    const versionHeader = versionNumber && versionNumber > 1 ? ` (Версия ${versionNumber})` : "";
+    return `🔄 Вариант перегенерирован${versionHeader}:\n\n*${esc(hook)}*\n\n${esc(body.slice(0, 300))}${body.length > 300 ? "…" : ""}`;
   }
 
   /**
@@ -71,10 +73,12 @@ export class TelegramContentPresenter {
   public formatVariantSelected(
     variantNumber: number,
     hook: string,
-    body: string
+    body: string,
+    versionNumber?: number
   ): string {
     const esc = (t: string) => this.escapeMarkdown(t);
-    return `✅ Выбран вариант *${variantNumber}*:\n\n*${esc(hook)}*\n\n${esc(body.slice(0, 300))}${body.length > 300 ? "…" : ""}\n\n💡 Напиши что изменить, или *«поставь завтра на 12»* чтобы запланировать.`;
+    const versionHeader = versionNumber && versionNumber > 1 ? ` (Версия ${versionNumber})` : "";
+    return `✅ Выбран вариант *${variantNumber}*${versionHeader}:\n\n*${esc(hook)}*\n\n${esc(body.slice(0, 300))}${body.length > 300 ? "…" : ""}\n\n💡 Напиши что изменить, или *«поставь завтра на 12»* чтобы запланировать.`;
   }
 
   /**

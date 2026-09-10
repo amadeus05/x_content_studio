@@ -10,10 +10,12 @@ export interface SelectVariantRequest {
 export interface SelectVariantResponse {
   post: PostDto;
   variantNumber: number;
+  variantId: string;
+  versionId: string;
   selectedHook: string;
   selectedBody: string;
-  activeHookId: string;
-  activeBodyId?: string;
+  hook: string;
+  body: string;
 }
 
 export class SelectVariantUseCase {
@@ -25,37 +27,40 @@ export class SelectVariantUseCase {
       return Result.fail("Активный пост не найден.");
     }
 
-    // Always validate against the real Post domain model, not trust external context hints
-    const hooks = post.hooks.slice().sort((a, b) => a.orderIndex - b.orderIndex);
-    const bodies = post.bodies.slice().sort((a, b) => a.orderIndex - b.orderIndex);
+    // Work strictly with PostVariant collection
+    const variants = post.getVariants();
 
-    if (req.variantNumber < 1 || req.variantNumber > hooks.length) {
+    if (req.variantNumber < 1 || req.variantNumber > variants.length) {
       return Result.fail(
-        `Вариант ${req.variantNumber} не существует. Доступно: ${hooks.length} вариантов.`
+        `Вариант ${req.variantNumber} не существует. Доступно: ${variants.length} вариантов.`
       );
     }
 
-    const targetHook = hooks[req.variantNumber - 1];
-    const targetBody = bodies[req.variantNumber - 1];
-
-    if (!targetHook) {
+    const targetVariant = variants[req.variantNumber - 1];
+    if (!targetVariant) {
       return Result.fail(`Вариант ${req.variantNumber} не найден.`);
     }
 
-    post.selectHook(targetHook.id);
-    if (targetBody) {
-      post.selectBody(targetBody.id);
-    }
+    // Select the variant on the post
+    post.selectVariant(targetVariant.id);
+
+    // Its active version becomes the current version
+    const activeVersion = targetVariant.getActiveVersion();
+    const versionId = activeVersion?.id || targetVariant.activeVersionId;
+    const hook = activeVersion?.hook || targetVariant.hook;
+    const body = activeVersion?.body || targetVariant.body;
 
     await this.postRepository.save(post);
 
     return Result.ok({
       post: PostMapper.toDto(post),
       variantNumber: req.variantNumber,
-      selectedHook: targetHook.text,
-      selectedBody: targetBody?.text || "",
-      activeHookId: targetHook.id,
-      activeBodyId: targetBody?.id
+      variantId: targetVariant.id,
+      versionId,
+      selectedHook: hook,
+      selectedBody: body,
+      hook,
+      body
     });
   }
 }
