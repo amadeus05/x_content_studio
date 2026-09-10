@@ -19,6 +19,22 @@ export type AiResult<T> = {
   meta: AiGenerationMeta;
 };
 
+/** Одно сообщение в multi-turn диалоге */
+export type ChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+/** Расширенный сервис с поддержкой истории сообщений (для Telegram-бота) */
+export interface IAiServiceWithHistory extends IAiService {
+  chatWithHistory(params: {
+    messages: ChatHistoryMessage[];
+    modelId?: string;
+    /** Опциональный системный промпт (переопределяет дефолтный) */
+    systemPrompt?: string;
+  }): Promise<AiResult<string>>;
+}
+
 export interface IAiService {
   generateHooks(params: {
     text: string;

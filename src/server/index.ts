@@ -11,6 +11,7 @@ import { PostController } from "./controllers/PostController.ts";
 import { PlaybookController } from "./controllers/PlaybookController.ts";
 import { AiController } from "./controllers/AiController.ts";
 import { MediaController } from "./controllers/MediaController.ts";
+import { handleTelegramWebhook } from "./controllers/TelegramController.ts";
 import {
   clearSessionCookieHeader,
   createSessionToken,
@@ -205,7 +206,8 @@ export function createApp(customDb?: IDatabase) {
     const path = c.req.path;
     if (
       path === "/api/health" ||
-      path.startsWith("/api/auth/")
+      path.startsWith("/api/auth/") ||
+      path === "/api/telegram/webhook"
     ) {
       await next();
       return;
@@ -229,6 +231,9 @@ export function createApp(customDb?: IDatabase) {
 
     return c.json({ error: "Unauthorized" }, 401);
   });
+
+  // --- Telegram Bot Webhook ---
+  app.post("/api/telegram/webhook", handleTelegramWebhook);
 
   // --- Posts Routes ---
   app.get("/api/posts", async (c) => {
